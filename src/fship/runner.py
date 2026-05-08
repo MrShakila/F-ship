@@ -147,18 +147,23 @@ def run_release(
                 return success
 
         def distribute_both_step():
-            # Always distribute APK
+            # Always distribute APK — success here blocks rollback
             apk_ok = distribute_step(flavor_config)
-            # Distribute IPA only if it was built in parallel
+            # Distribute IPA only if it was built; failures are warnings, not rollback triggers
             if build_state["ipa_built"] and flavor_config.ipa_path and flavor_config.firebase_app_id_env_ios:
                 console.print("\n[bold blue]→[/bold blue] Distribute IPA to Firebase")
-                ios_ok = distribute_to_firebase(
-                    flavor_config.ipa_path,
-                    flavor_config.firebase_app_id_env_ios,
-                    flavor_config.groups,
-                )
-                if not ios_ok:
-                    console.print("[yellow]⚠[/yellow] iOS distribution failed (Android succeeded)")
+                try:
+                    ios_ok = distribute_to_firebase(
+                        flavor_config.ipa_path,
+                        flavor_config.firebase_app_id_env_ios,
+                        flavor_config.groups,
+                        artifact_label="IPA",
+                    )
+                    if not ios_ok:
+                        console.print("[yellow]⚠[/yellow] IPA distribution failed (Android succeeded)")
+                except Exception as e:
+                    console.print(f"[yellow]⚠[/yellow] IPA distribution error: {e}")
+                    console.print("[yellow]  Android release published. Retry IPA manually with --resume-from distribute[/yellow]")
             return apk_ok
 
         all_steps = [
@@ -278,6 +283,7 @@ def distribute_step(flavor_config: FlavorConfig) -> bool:
         flavor_config.apk_path,
         flavor_config.firebase_app_id_env_android,
         flavor_config.groups,
+        artifact_label="APK",
     )
 
 
