@@ -102,22 +102,173 @@ Single variable names per flavor, determined by `.env` file name:
 
 **Why:** Simpler than flavor-prefixed names; CI/CD friendly (name encodes flavor).
 
-## Release Flow
+## Command Logic Maps
+
+### `fship release <flavor>`
 
 ```
-1. validate_input()              [validation layer]
-2. read_version()                [core: versioning]
-3. resolve_version()             [core: versioning]
-4. update_pubspec()              [core: versioning + file I/O]
-5. generate_changelog()          [operations: changelog]
-6. generate_release_notes()      [operations: git]
-7. git_add_and_commit()          [operations: git]
-8. git_tag()                     [operations: git]
-9. build_apk() / build_ipa()     [operations: builder]
-10. distribute_to_firebase()     [operations: distributor]
+main.py::release()
+│
+├── load_config(flavor)
+│   └── load_env_file(flavor)           ← loads .env.{flavor} ONLY
+│       └── if missing → warn + use system env
+│
+├── get_flavor(config, flavor)          ← validates flavor exists
+├── validate_bump_part(bump)            ← if --bump given
+│
+└── run_release(flavor, flavor_config, ...)
+    │
+    ├── read_version()                  ← reads pubspec.yaml
+    ├── resolve_version()               ← interactive or --version/--bump
+    │   ├── prod  → bump_version()      ← X.Y.Z+0 (no suffix)
+    │   └── other → bump_flavor_version() ← X.Y.Z-suffix+B
+    │
+    ├── [resume_from] → skip to step
+    │
+    ├── step: Update pubspec.yaml       ← write_version()
+    ├── step: Generate CHANGELOG.md     ← git-chglog (non-fatal if missing)
+    ├── step: Generate release notes    ← git log since last tag → release_note.txt
+    ├── step: Commit & tag              ← git add + commit + tag (ONCE)
+    │
+    ├── step: Build
+    │   ├── ipa_path configured?
+    │   │   ├── FSHIP_PARALLEL_BUILDS=1 → APK + IPA in parallel threads
+    │   │   └── else                    → APK first, then IPA sequentially
+    │   └── no ipa_path                 → APK only
+    │
+    ├── step: Distribute to Firebase
+    │   ├── always → distribute APK (APPIDANDROID)
+    │   └── ipa_built=True → distribute IPA (APPIDIOS) in same step
+    │
+    ├── on step failure
+    │   ├── auto_rollback=True + tag already created?
+    │   │   ├── revert pubspec.yaml
+    │   │   ├── git reset --soft HEAD~1
+    │   │   └── git tag -d {tag}
+    │   └── print: fix issue, retry with --resume-from
+    │
+    └── show_summary()
 ```
 
-Each step can be skipped with `--skip-build` or `--skip-distribute`.
+---
+
+### `fship multi-release <flavors>`
+
+```
+main.py::multi_release()
+│
+├── load_config()                       ← config only, no env loaded yet
+├── validate_bump_part(bump)
+│
+└── run_multi_release(flavor_list, config, ...)
+    │
+    └── for each flavor in list:
+        ├── load_env_file(flavor)       ← reload env per flavor
+        ├── get_flavor(config, flavor)
+        └── run_release(flavor, ...)    ← full release flow (see above)
+    │
+    └── print per-flavor summary table
+```
+
+---
+
+### `fship status [flavor]`
+
+```
+main.py::status()
+│
+├── read_version()                      ← pubspec.yaml current version
+│
+├── git tag --sort=-version:refname     ← get all tags
+│   └── filter by flavor if given
+│
+├── git log -1 --format=%ar {last_tag}  ← "2 days ago"
+│
+└── git rev-list --count {tag}..HEAD    ← pending commit count
+```
+
+---
+
+### `fship pre-check <flavor>`
+
+```
+main.py::pre_check()
+│
+├── load_config(flavor)                 ← load config + flavor env
+├── get_flavor(config, flavor)          ← validate flavor exists
+│
+├── flutter --version                  ← check Flutter SDK
+├── firebase --version                 ← check Firebase CLI
+│
+├── os.getenv(APPIDANDROID)            ← check Android app ID set
+├── os.getenv(APPIDIOS)                ← check iOS app ID set (warn only)
+│
+├── check apk_path exists              ← warn if not built yet
+│
+└── print: all OK / issues found
+```
+
+---
+
+### `fship init`
+
+```
+main.py::init()
+│
+├── CONFIG_FILE exists? → prompt overwrite
+│
+├── interactive=True
+│   ├── prompt: flavors to configure (qa/uat/prod/custom)
+│   ├── per flavor:
+│   │   ├── entrypoint (lib/main_{flavor}.dart)
+│   │   ├── apk_path
+│   │   ├── ipa_path
+│   │   └── groups (testers)
+│   ├── print Firebase Console guide
+│   └── print .env setup options
+│
+└── save_config() → .config/fship.json
+```
+
+---
+
+### `fship validate`
+
+```
+main.py::validate()
+│
+├── load_config()                       ← all env files loaded
+├── validate config schema
+│
+├── per flavor:
+│   ├── os.getenv(APPIDANDROID)        ← check Android ID
+│   └── os.getenv(APPIDIOS)            ← check iOS ID
+│
+└── check tools:
+    ├── flutter --version
+    ├── firebase --version
+    ├── git --version
+    └── git-chglog --version
+```
+
+---
+
+### `fship help`
+
+```
+main.py::help()
+└── print: commands table, options, examples, version formats,
+          rollback behavior, env vars, setup guide
+```
+
+---
+
+### `fship version`
+
+```
+main.py::version()
+└── print: fship {__version__}          ← from src/fship/__init__.py
+```
 
 ## Security Considerations
 
