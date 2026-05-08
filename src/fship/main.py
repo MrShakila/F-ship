@@ -73,60 +73,18 @@ def release(
 
 
 @app.command()
-def configure():
-    """Interactive setup: configure flavors and app IDs."""
+def init():
+    """Initialize fship config with default template."""
     CONFIG_DIR.mkdir(exist_ok=True)
 
     if CONFIG_FILE.exists():
-        overwrite = Prompt.ask(
-            f"{CONFIG_FILE} already exists. Overwrite?",
-            choices=["y", "n"],
-            default="n",
-        )
-        if overwrite == "n":
-            console.print("[dim]Using existing config.[/dim]")
-            return
+        console.print(f"[dim]{CONFIG_FILE} already exists.[/dim]")
+        console.print(f"[dim]Edit it or delete to reinitialize: rm -rf {CONFIG_DIR}[/dim]")
+        return
 
-    console.rule("[bold cyan]fship Configure[/bold cyan]")
-    console.print("Configure your Flutter release flavors.\n")
-
-    cfg = {"flavors": {}}
-
-    while True:
-        flavor_name = Prompt.ask("Flavor name (e.g. qa, uat, prod, or done to finish)")
-
-        if flavor_name.lower() == "done":
-            break
-
-        console.print(f"\n[cyan]{flavor_name}:[/cyan]")
-        firebase_app_id_env = Prompt.ask(
-            "  Firebase app ID env var",
-            default=f"FIREBASE_{flavor_name.upper()}_APP_ID",
-        )
-        entrypoint = Prompt.ask(
-            "  Entry point", default=f"lib/main_{flavor_name}.dart"
-        )
-        apk_path = Prompt.ask(
-            "  APK path",
-            default=f"build/app/outputs/flutter-apk/app-{flavor_name}-release.apk",
-        )
-        groups = Prompt.ask("  Firebase groups", default="testers")
-
-        cfg["flavors"][flavor_name] = {
-            "firebase_app_id_env": firebase_app_id_env,
-            "entrypoint": entrypoint,
-            "apk_path": apk_path,
-            "groups": groups,
-        }
-
-        console.print(f"[green]✓[/green] Added {flavor_name}\n")
-
-    if not cfg["flavors"]:
-        console.print("[red]No flavors configured. Aborting.[/red]")
-        raise typer.Exit(1)
-
-    save_config(cfg)
-    console.print(f"\n[green]✓ Config saved to {CONFIG_FILE}[/green]")
+    save_config(DEFAULT_CFG)
+    console.print(f"[green]✓[/green] Created default config: {CONFIG_FILE}")
+    console.print(f"[yellow]⚠ Edit {CONFIG_FILE} to customize entrypoints and APK paths[/yellow]")
 
 
 @app.command()
