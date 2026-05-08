@@ -1,0 +1,21 @@
+# fship — Flutter Ship release configuration
+# Copy this to your Flutter project root and customize app IDs, paths, and groups
+
+flavors:
+  qa:
+    firebase_app_id_env: FIREBASE_QA_APP_ID
+    entrypoint: lib/main_qa.dart
+    apk_path: build/app/outputs/flutter-apk/app-qa-release.apk
+    groups: testers
+
+  uat:
+    firebase_app_id_env: FIREBASE_UAT_APP_ID
+    entrypoint: lib/main_uat.dart
+    apk_path: build/app/outputs/flutter-apk/app-uat-release.apk
+    groups: testers
+
+  prod:
+    firebase_app_id_env: FIREBASE_PROD_APP_ID
+    entrypoint: lib/main_prod.dart
+    apk_path: build/app/outputs/flutter-apk/app-prod-release.apk
+    groups: testers

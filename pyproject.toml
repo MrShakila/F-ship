@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fship"
+version = "0.1.0"
+description = "Flutter Ship — orchestrate release workflows to Firebase App Distribution"
+requires-python = ">=3.11"
+dependencies = [
+    "typer[all]>=0.12",
+    "rich>=13.7",
+    "pyyaml>=6.0",
+    "ruamel.yaml>=0.18",
+]
+
+[project.scripts]
+fship = "fship.main:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fship"]
