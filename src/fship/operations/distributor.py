@@ -62,17 +62,15 @@ def distribute_to_firebase(
 
     try:
         console.print(f"[dim]$ {' '.join(cmd)}[/dim]")
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        console.print("[cyan]Uploading to Firebase...[/cyan]")
+
+        result = subprocess.run(cmd, capture_output=False, text=True, check=False)
 
         if result.returncode != 0:
-            console.print(
-                f"[red]✗ Firebase distribution failed:[/red]\n{result.stderr[:500]}"
-            )
+            console.print(f"[red]✗ Firebase distribution failed[/red]")
             return False
 
         console.print("[green]✓[/green] APK distributed to Firebase")
-        if "share-link" in result.stdout or "http" in result.stdout:
-            console.print(f"[dim]{result.stdout}[/dim]")
         return True
 
     except FileNotFoundError as e:

@@ -40,12 +40,12 @@ def build_apk(flavor: str, entrypoint: str) -> tuple[bool, str]:
 
     try:
         console.print(f"[dim]$ {' '.join(cmd)}[/dim]")
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        console.print("[cyan]Building...[/cyan]")
+
+        result = subprocess.run(cmd, check=False)
 
         if result.returncode != 0:
-            console.print(
-                f"[red]✗ Flutter build failed:[/red]\n{result.stderr[:500]}"
-            )
+            console.print(f"[red]✗ Flutter build failed[/red]")
             return False, ""
 
         console.print("[green]✓[/green] APK built successfully")
