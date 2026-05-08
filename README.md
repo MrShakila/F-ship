@@ -243,26 +243,90 @@ fship release qa
 5. Find your app and click it
 6. Copy the **Google App ID** (format: `1:123456789:android:abcdef...` or `1:123456789:ios:ghijkl...`)
 
-## Commands
+## All Commands and Options
+
+### Main Commands
 
 ```bash
-fship release <flavor> [OPTIONS]
+fship release <flavor> [OPTIONS]   # Release to Firebase App Distribution
 fship init                         # Interactive setup with Firebase guide
-fship validate                     # Check tools and config
+fship validate                     # Check tools, config, and environment
 fship version                      # Show fship version
-fship --help                       # Full help
+fship --help                       # Show all commands and options
 ```
 
 ### Release Options
 
 ```bash
---version X.Y.Z+B              # Exact version (e.g., 3.0.4+79)
---bump patch|minor|major       # Auto-increment version, reset build to 0
---skip-build                   # Skip Flutter build (testing only)
---skip-distribute              # Skip Firebase distribution (dry-run)
---no-push                      # Commit and tag locally, don't push to remote
---resume-from STEP             # Retry from failed step (skip earlier steps)
+FLAVOR                         # Required: qa, uat, prod, or custom flavor
+
+--version, -v VERSION         # Exact version (e.g., 3.0.4+79)
+--bump, -b PART               # Auto-bump version: patch, minor, or major
+--skip-build                  # Skip Flutter build step
+--skip-distribute             # Skip Firebase distribution step
+--no-push                     # Commit and tag locally, don't push to remote
+--resume-from STEP            # Resume from failed step (skip earlier steps)
 ```
+
+### Release Examples
+
+```bash
+# Interactive (prompts for version)
+fship release qa
+
+# Exact version
+fship release qa --version 3.0.4+79
+
+# Auto-increment (patch)
+fship release qa --bump patch     # X.Y.Z+B → X.Y.(Z+1)+0
+
+# Auto-increment (minor)
+fship release qa --bump minor     # X.Y.Z+B → X.(Y+1).0+0
+
+# Auto-increment (major)
+fship release qa --bump major     # X.Y.Z+B → (X+1).0.0+0
+
+# Prod flavor (semantic versioning, no suffix)
+fship release prod --bump patch   # X.Y.Z+B → X.Y.(Z+1)+0
+
+# Dry run (version + changelog + tag, no build/distribute)
+fship release qa --skip-build --skip-distribute
+
+# No push (local commit/tag only)
+fship release qa --no-push
+
+# Retry from build (after fixing app ID, build paths, etc.)
+fship release qa --resume-from build
+
+# Retry from distribution (after fixing Firebase config)
+fship release qa --resume-from distribute
+
+# Custom flavor (user-defined in .config/fship.json)
+fship release staging --version 2.0.0+0
+```
+
+### Version Format
+
+**Standard flavors (qa, uat, custom)**:
+- With suffix: `X.Y.Z-suffix+B` (e.g., `3.0.4-qa-2+79`)
+- Without suffix: `X.Y.Z+B` (e.g., `3.0.4+77`)
+- Bumping adds flavor suffix if missing: `3.0.4+77` → `3.0.4-qa-1+78`
+
+**Prod flavor**:
+- Pure semantic: `X.Y.Z+0` (e.g., `3.0.5+0`)
+- No suffix names (just numbers)
+- Bumping uses standard semantic versioning
+
+### Resume Steps
+
+When using `--resume-from STEP`, available steps are:
+
+1. `version` — Update pubspec.yaml
+2. `changelog` — Generate CHANGELOG.md
+3. `notes` — Generate release notes
+4. `tag` — Commit and create git tag
+5. `build` — Build APK/IPA
+6. `distribute` — Distribute to Firebase App Distribution
 
 ### Resume From Failed Step
 
