@@ -77,18 +77,113 @@ def release(
 
 
 @app.command()
-def init():
-    """Initialize fship config with default template."""
+def init(interactive: bool = typer.Option(True, "--interactive/--no-interactive", help="Interactive setup with Firebase app ID guide")):
+    """Initialize fship config and setup Firebase app IDs."""
+    from rich.prompt import Prompt
+
     CONFIG_DIR.mkdir(exist_ok=True)
 
     if CONFIG_FILE.exists():
         console.print(f"[dim]{CONFIG_FILE} already exists.[/dim]")
-        console.print(f"[dim]Edit it or delete to reinitialize: rm -rf {CONFIG_DIR}[/dim]")
-        return
+        overwrite = Prompt.ask("[yellow]Overwrite?[/yellow]", choices=["y", "n"], default="n")
+        if overwrite != "y":
+            return
 
-    save_config(DEFAULT_CFG)
-    console.print(f"[green]✓[/green] Created default config: {CONFIG_FILE}")
-    console.print(f"[yellow]⚠ Edit {CONFIG_FILE} to customize entrypoints and APK paths[/yellow]")
+    console.rule("[bold cyan]fship Setup[/bold cyan]")
+    console.print()
+
+    config = DEFAULT_CFG.copy()
+    config["flavors"] = {}
+
+    if interactive:
+        console.print("[bold]Step 1: Configure Flavors[/bold]")
+        console.print("[dim]Add flavors (qa, uat, prod, or custom)[/dim]\n")
+
+        flavors = Prompt.ask(
+            "Flavors (comma-separated)",
+            default="qa,uat,prod"
+        )
+
+        for flavor in [f.strip() for f in flavors.split(",") if f.strip()]:
+            console.print(f"\n[bold blue]→ {flavor.upper()}[/bold blue]")
+
+            entrypoint = Prompt.ask(
+                "  Dart entrypoint path",
+                default=f"lib/main_{flavor}.dart"
+            )
+
+            apk_path = Prompt.ask(
+                "  APK output path",
+                default=f"build/app/outputs/flutter-apk/app-{flavor}-release.apk"
+            )
+
+            app_id_env = Prompt.ask(
+                "  Environment variable name for Firebase app ID",
+                default=f"APPIDANDROID_{flavor.upper()}"
+            )
+
+            groups = Prompt.ask(
+                "  Firebase distribution groups",
+                default="testers"
+            )
+
+            config["flavors"][flavor] = {
+                "firebase_app_id_env": app_id_env,
+                "entrypoint": entrypoint,
+                "apk_path": apk_path,
+                "groups": groups,
+            }
+
+        console.print("\n[bold]Step 2: Get Firebase App IDs[/bold]")
+        console.print()
+        _print_firebase_setup_guide(config)
+
+        console.print("\n[bold]Step 3: Set Environment Variables[/bold]")
+        _print_env_setup(config)
+
+    else:
+        config = DEFAULT_CFG
+
+    save_config(config)
+    console.print(f"\n[green]✓[/green] Config saved to {CONFIG_FILE}")
+
+
+def _print_firebase_setup_guide(config: dict) -> None:
+    """Print guide for getting Firebase app IDs."""
+    console.print("[yellow]Get your Firebase App IDs:[/yellow]\n")
+    console.print("1. Go to [cyan]Firebase Console[/cyan]: https://console.firebase.google.com")
+    console.print("2. Select your project")
+    console.print("3. Click [bold]Project Settings[/bold] (gear icon)")
+    console.print("4. Select [bold]Your apps[/bold] tab")
+    console.print("5. Find your Android app and click it")
+    console.print("6. Copy the [bold]Google App ID[/bold] (format: [dim]1:123456789:android:abcdef...[/dim])")
+    console.print()
+    console.print("[bold]App IDs needed for:[/bold]")
+    for flavor, cfg in config.get("flavors", {}).items():
+        console.print(f"  {flavor:8} → {cfg['firebase_app_id_env']}")
+
+
+def _print_env_setup(config: dict) -> None:
+    """Print instructions for setting up environment variables."""
+    console.print("[yellow]Option 1: Use .env.dev (all flavors in one file)[/yellow]\n")
+    console.print("Create [bold].env.dev[/bold]:")
+    for flavor, cfg in config.get("flavors", {}).items():
+        console.print(f"  [cyan]{cfg['firebase_app_id_env']}[/cyan]=1:123456789:android:abcdef...")
+    console.print()
+
+    console.print("[yellow]Option 2: Use flavor-specific files (recommended)[/yellow]\n")
+    for flavor, cfg in config.get("flavors", {}).items():
+        console.print(f"Create [bold].env.{flavor}[/bold]:")
+        console.print(f"  [cyan]{cfg['firebase_app_id_env']}[/cyan]=1:123456789:android:abcdef...")
+    console.print()
+
+    console.print("[yellow]Option 3: Export as environment variables[/yellow]\n")
+    console.print("In your shell:")
+    for flavor, cfg in config.get("flavors", {}).items():
+        console.print(f"  [dim]export {cfg['firebase_app_id_env']}='1:123456789:android:abcdef...'[/dim]")
+    console.print()
+
+    console.print("[green]✓[/green] Run [cyan]fship validate[/cyan] after setup to verify")
 
 
 @app.command()
