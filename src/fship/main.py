@@ -161,8 +161,10 @@ def _print_firebase_setup_guide(config: dict) -> None:
     console.print("6. Copy the [bold]Google App ID[/bold] (format: [dim]1:123456789:android:abcdef...[/dim])")
     console.print()
     console.print("[bold]App IDs needed for:[/bold]")
-    for flavor in config.get("flavors", {}).keys():
-        console.print(f"  {flavor:8} → APPIDANDROID + APPIDIOS")
+    for flavor, cfg in config.get("flavors", {}).items():
+        android_key = cfg.get("firebase_app_id_env_android", "APPIDANDROID")
+        ios_key = cfg.get("firebase_app_id_env_ios", "APPIDIOS")
+        console.print(f"  {flavor:8} → {android_key} + {ios_key}")
 
 
 def _print_env_setup(config: dict) -> None:
