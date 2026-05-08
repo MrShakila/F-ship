@@ -56,7 +56,7 @@ def release(
         fship release prod --bump minor     # Bump minor, reset patch
     """
     try:
-        config = load_config()
+        config = load_config(flavor)
         flavor_config = get_flavor(config, flavor)
 
         if bump:

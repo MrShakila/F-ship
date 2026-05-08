@@ -46,23 +46,36 @@ DEFAULT_CFG = {
 }
 
 
-def load_env_file() -> None:
-    """Load environment variables from .env.* files (dev, qa, uat, prod)."""
-    env_files = [
+def load_env_file(flavor: str = None) -> None:
+    """Load environment variables from flavor-specific .env file.
+
+    Args:
+        flavor: Flavor name (qa, uat, prod, custom). If specified, loads ONLY that flavor's file.
+                If None, loads all existing .env files (for validation/setup).
+    """
+    all_env_files = [
         Path.cwd() / ".env.dev",
         Path.cwd() / ".env.qa",
         Path.cwd() / ".env.uat",
         Path.cwd() / ".env.prod",
     ]
 
-    if not any(f.exists() for f in env_files):
+    if not any(f.exists() for f in all_env_files):
         _create_env_template()
         return
 
-    loaded = []
-    for env_file in env_files:
+    # If flavor specified, load ONLY that flavor's env file
+    if flavor:
+        env_file = Path.cwd() / f".env.{flavor}"
         if not env_file.exists():
-            continue
+            return
+        env_files_to_load = [env_file]
+    else:
+        # Load all existing env files (for validate command)
+        env_files_to_load = [f for f in all_env_files if f.exists()]
+
+    loaded = []
+    for env_file in env_files_to_load:
         try:
             for line in env_file.read_text().strip().split("\n"):
                 line = line.strip()
@@ -121,9 +134,13 @@ class Config:
     flavors: dict[str, FlavorConfig]
 
 
-def load_config() -> Config:
-    """Load config from .config/fship.json or create with defaults."""
-    load_env_file()
+def load_config(flavor: str = None) -> Config:
+    """Load config from .config/fship.json or create with defaults.
+
+    Args:
+        flavor: Flavor name to load corresponding .env.{flavor} file. Falls back to .env.dev.
+    """
+    load_env_file(flavor)
     CONFIG_DIR.mkdir(exist_ok=True)
 
     if not CONFIG_FILE.exists():
