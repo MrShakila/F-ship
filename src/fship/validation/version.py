@@ -5,7 +5,7 @@ from fship.errors import ValidationError
 
 
 def validate_version_format(version_str: str) -> bool:
-    """Validate version matches X.Y.Z+B format.
+    """Validate version matches X.Y.Z+B or X.Y.Z-suffix+B format.
 
     Args:
         version_str: Version string to validate
@@ -19,11 +19,11 @@ def validate_version_format(version_str: str) -> bool:
     if not version_str or not isinstance(version_str, str):
         raise ValidationError("Version must be non-empty string")
 
-    pattern = r"^\d+\.\d+\.\d+\+\d+$"
+    pattern = r"^\d+\.\d+\.\d+(-[a-z0-9\-]+)?\+\d+$"
     if not re.match(pattern, version_str):
         raise ValidationError(
             f"Invalid version format: {version_str!r}. "
-            "Expected: X.Y.Z+B (e.g., 1.2.3+45)"
+            "Expected: X.Y.Z+B or X.Y.Z-suffix+B (e.g., 1.2.3+45 or 1.2.3-qa1+45)"
         )
     return True
 

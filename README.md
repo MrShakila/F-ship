@@ -45,7 +45,7 @@ fship release qa --bump patch       # Auto-increment patch
 - Interactive or automated version bumping
 - Auto-increment: patch, minor, or major
 - Exact version specification
-- Format validation (X.Y.Z+B)
+- Format validation (X.Y.Z+B or X.Y.Z-suffix+B)
 
 ✓ **Changelog Generation**
 - Auto-generate CHANGELOG.md from git history
