@@ -195,14 +195,14 @@ File: `.github/workflows/release.yml`
 
 1. Edit `.config/fship.json`:
    ```json
-   "staging": {
+   "custom": {
      "firebase_app_id_env_android": "APPIDANDROID",
      "firebase_app_id_env_ios": "APPIDIOS",
      ...
    }
    ```
 
-2. Create `.env.staging`:
+2. Create `.env.custom`:
    ```bash
    APPIDANDROID=...
    APPIDIOS=...
