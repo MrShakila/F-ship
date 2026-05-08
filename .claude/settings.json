@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pipx install *)"
+      "Bash(pipx install *)",
+      "Bash(~/.local/bin/pyproject-build)"
     ]
   }
 }
