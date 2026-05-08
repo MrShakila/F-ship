@@ -19,19 +19,19 @@ ENV_FILE = Path.cwd() / ".env.dev"
 DEFAULT_CFG = {
     "flavors": {
         "qa": {
-            "firebase_app_id_env": "APPIDANDROID_QA",
+            "firebase_app_id_env": "APPIDANDROID",
             "entrypoint": "lib/main_qa.dart",
             "apk_path": "build/app/outputs/flutter-apk/app-qa-release.apk",
             "groups": "testers",
         },
         "uat": {
-            "firebase_app_id_env": "APPIDANDROID_UAT",
+            "firebase_app_id_env": "APPIDANDROID",
             "entrypoint": "lib/main_uat.dart",
             "apk_path": "build/app/outputs/flutter-apk/app-uat-release.apk",
             "groups": "testers",
         },
         "prod": {
-            "firebase_app_id_env": "APPIDANDROID_PROD",
+            "firebase_app_id_env": "APPIDANDROID",
             "entrypoint": "lib/main_prod.dart",
             "apk_path": "build/app/outputs/flutter-apk/app-prod-release.apk",
             "groups": "testers",
@@ -75,12 +75,11 @@ def load_env_file() -> None:
 
 def _create_env_template() -> None:
     """Create .env.dev template and prompt user to fill in Android app IDs."""
-    template = """# Firebase Android App IDs for each flavor
-# Get these from Firebase Console > App settings
+    template = """# Firebase Android App ID
+# Same variable for all flavors (flavor determined by .env file)
+# Get this from Firebase Console > App settings
 
-APPIDANDROID_QA=
-APPIDANDROID_UAT=
-APPIDANDROID_PROD=
+APPIDANDROID=
 """
     ENV_FILE.write_text(template)
     console.print(f"[yellow]⚠  Created template: {ENV_FILE}[/yellow]")

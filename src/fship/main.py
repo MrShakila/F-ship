@@ -119,7 +119,7 @@ def init(interactive: bool = typer.Option(True, "--interactive/--no-interactive"
 
             app_id_env = Prompt.ask(
                 "  Environment variable name for Firebase app ID",
-                default=f"APPIDANDROID_{flavor.upper()}"
+                default="APPIDANDROID"
             )
 
             groups = Prompt.ask(
@@ -165,22 +165,20 @@ def _print_firebase_setup_guide(config: dict) -> None:
 
 def _print_env_setup(config: dict) -> None:
     """Print instructions for setting up environment variables."""
-    console.print("[yellow]Option 1: Use .env.dev (all flavors in one file)[/yellow]\n")
+    console.print("[yellow]Option 1: Use .env.dev (single file for dev)[/yellow]\n")
     console.print("Create [bold].env.dev[/bold]:")
-    for flavor, cfg in config.get("flavors", {}).items():
-        console.print(f"  [cyan]{cfg['firebase_app_id_env']}[/cyan]=1:123456789:android:abcdef...")
+    console.print(f"  [cyan]APPIDANDROID[/cyan]=1:123456789:android:abcdef...")
     console.print()
 
-    console.print("[yellow]Option 2: Use flavor-specific files (recommended)[/yellow]\n")
-    for flavor, cfg in config.get("flavors", {}).items():
+    console.print("[yellow]Option 2: Use flavor-specific files (recommended for CI/CD)[/yellow]\n")
+    console.print("Flavor determined by filename (.env.{flavor}):\n")
+    for flavor in config.get("flavors", {}).keys():
         console.print(f"Create [bold].env.{flavor}[/bold]:")
-        console.print(f"  [cyan]{cfg['firebase_app_id_env']}[/cyan]=1:123456789:android:abcdef...")
-    console.print()
+        console.print(f"  [cyan]APPIDANDROID[/cyan]=1:123456789:android:abcdef...\n")
 
-    console.print("[yellow]Option 3: Export as environment variables[/yellow]\n")
+    console.print("[yellow]Option 3: Export as environment variable[/yellow]\n")
     console.print("In your shell:")
-    for flavor, cfg in config.get("flavors", {}).items():
-        console.print(f"  [dim]export {cfg['firebase_app_id_env']}='1:123456789:android:abcdef...'[/dim]")
+    console.print(f"  [dim]export APPIDANDROID='1:123456789:android:abcdef...'[/dim]")
     console.print()
 
     console.print("[green]✓[/green] Run [cyan]fship validate[/cyan] after setup to verify")
