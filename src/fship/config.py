@@ -14,19 +14,19 @@ ENV_FILE = Path.cwd() / ".env.dev"
 DEFAULT_CFG = {
     "flavors": {
         "qa": {
-            "firebase_app_id_env": "FIREBASE_QA_APP_ID",
+            "firebase_app_id_env": "APPIDANDROID_QA",
             "entrypoint": "lib/main_qa.dart",
             "apk_path": "build/app/outputs/flutter-apk/app-qa-release.apk",
             "groups": "testers",
         },
         "uat": {
-            "firebase_app_id_env": "FIREBASE_UAT_APP_ID",
+            "firebase_app_id_env": "APPIDANDROID_UAT",
             "entrypoint": "lib/main_uat.dart",
             "apk_path": "build/app/outputs/flutter-apk/app-uat-release.apk",
             "groups": "testers",
         },
         "prod": {
-            "firebase_app_id_env": "FIREBASE_PROD_APP_ID",
+            "firebase_app_id_env": "APPIDANDROID_PROD",
             "entrypoint": "lib/main_prod.dart",
             "apk_path": "build/app/outputs/flutter-apk/app-prod-release.apk",
             "groups": "testers",
@@ -38,6 +38,7 @@ DEFAULT_CFG = {
 def load_env_file() -> None:
     """Load environment variables from .env.dev if it exists."""
     if not ENV_FILE.exists():
+        _create_env_template()
         return
 
     try:
@@ -51,6 +52,26 @@ def load_env_file() -> None:
         console.print(f"[dim]Loaded env from {ENV_FILE}[/dim]")
     except Exception as e:
         console.print(f"[yellow]Warning: Failed to load {ENV_FILE}: {e}[/yellow]")
+
+
+def _create_env_template() -> None:
+    """Create .env.dev template and prompt user to fill in Android app IDs."""
+    template = """# Firebase Android App IDs for each flavor
+# Get these from Firebase Console > App settings
+
+APPIDANDROID_QA=
+APPIDANDROID_UAT=
+APPIDANDROID_PROD=
+"""
+    ENV_FILE.write_text(template)
+    console.print(f"[yellow]⚠  Created template: {ENV_FILE}[/yellow]")
+    console.print(f"[yellow]Please edit and add your Android app IDs:[/yellow]")
+    console.print(f"[dim]  APPIDANDROID_QA=1:123456:android:abcdef...[/dim]")
+    console.print(f"[dim]  APPIDANDROID_UAT=1:345678:android:ghijkl...[/dim]")
+    console.print(f"[dim]  APPIDANDROID_PROD=1:789012:android:mnopqr...[/dim]")
+    console.print(f"[dim]Get values from: Firebase Console > App settings[/dim]")
+    console.print()
+    raise SystemExit("Configure .env.dev and run again")
 
 
 @dataclass

@@ -60,13 +60,13 @@ fship validate
 ```yaml
 flavors:
   qa:
-    firebase_app_id_env: FIREBASE_QA_APP_ID
+    firebase_app_id_env: APPIDANDROID_QA
     entrypoint: lib/main_qa.dart
     apk_path: build/app/outputs/flutter-apk/app-qa-release.apk
     groups: testers
 
   prod:
-    firebase_app_id_env: FIREBASE_PROD_APP_ID
+    firebase_app_id_env: APPIDANDROID_PROD
     entrypoint: lib/main_prod.dart
     apk_path: build/app/outputs/flutter-apk/app-prod-release.apk
     groups: testers
@@ -113,21 +113,23 @@ fship release qa --skip-build --skip-distribute
 
 ## Environment Setup
 
-Create `.env.dev` in your Flutter project root with Firebase app IDs:
+**First run creates `.env.dev` template:**
+```bash
+fship release qa
+# Creates .env.dev with placeholders, prompts you to fill in Android app IDs
+```
 
+Edit `.env.dev` with your Firebase Android app IDs:
 ```bash
 # .env.dev (add to .gitignore)
-FIREBASE_QA_APP_ID=1:123456:android:abcdef...
-FIREBASE_UAT_APP_ID=1:345678:android:ghijkl...
-FIREBASE_PROD_APP_ID=1:789012:android:mnopqr...
+APPIDANDROID_QA=1:123456:android:abcdef...
+APPIDANDROID_UAT=1:345678:android:ghijkl...
+APPIDANDROID_PROD=1:789012:android:mnopqr...
 ```
+
+Get app IDs from Firebase Console > Project Settings > Your apps (Android).
 
 fship automatically loads from `.env.dev` when you run `fship release`.
-
-Alternatively, export as environment variables:
-```bash
-export FIREBASE_QA_APP_ID=1:123456:android:abcdef...
-```
 
 ## Commands
 
