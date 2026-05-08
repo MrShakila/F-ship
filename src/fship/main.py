@@ -261,6 +261,65 @@ def validate():
 
 
 @app.command()
+def help():
+    """Show detailed help with all commands and options."""
+    from fship import __version__
+
+    console.print(f"\n[bold cyan]fship {__version__}[/bold cyan] — Flutter Ship Release Orchestration")
+    console.print("[dim]Automate Flutter releases to Firebase App Distribution[/dim]\n")
+
+    console.print("[bold]COMMANDS[/bold]")
+    console.print("  [cyan]release[/cyan]    Release flavor to Firebase (with version bump, build, distribute)")
+    console.print("  [cyan]init[/cyan]       Interactive setup with Firebase app ID guide")
+    console.print("  [cyan]validate[/cyan]   Check tools, config, and environment")
+    console.print("  [cyan]version[/cyan]    Show fship version")
+    console.print("  [cyan]help[/cyan]       Show this help message\n")
+
+    console.print("[bold]RELEASE OPTIONS[/bold]")
+    console.print("  [cyan]fship release <flavor> [OPTIONS][/cyan]\n")
+    console.print("  [yellow]<flavor>[/yellow]              Required: qa, uat, prod, or custom")
+    console.print("  [yellow]--version, -v VERSION[/yellow]  Exact version (e.g., 3.0.4+79)")
+    console.print("  [yellow]--bump, -b PART[/yellow]       Auto-bump: patch, minor, or major")
+    console.print("  [yellow]--skip-build[/yellow]           Skip Flutter build")
+    console.print("  [yellow]--skip-distribute[/yellow]      Skip Firebase distribution")
+    console.print("  [yellow]--no-push[/yellow]              Commit and tag locally, don't push")
+    console.print("  [yellow]--resume-from STEP[/yellow]    Retry from step: version, changelog, notes, tag, build, distribute\n")
+
+    console.print("[bold]EXAMPLES[/bold]")
+    console.print("  [dim]# Interactive version selection[/dim]")
+    console.print("  fship release qa\n")
+    console.print("  [dim]# Exact version[/dim]")
+    console.print("  fship release qa --version 3.0.4+79\n")
+    console.print("  [dim]# Auto-increment patch[/dim]")
+    console.print("  fship release qa --bump patch\n")
+    console.print("  [dim]# Dry run (version + tag, no build)[/dim]")
+    console.print("  fship release qa --skip-build --skip-distribute\n")
+    console.print("  [dim]# Retry after fixing Firebase app ID[/dim]")
+    console.print("  fship release qa --resume-from distribute\n")
+    console.print("  [dim]# Release to prod (semantic versioning)[/dim]")
+    console.print("  fship release prod --bump patch\n")
+
+    console.print("[bold]VERSION FORMATS[/bold]")
+    console.print("  [cyan]Prod:[/cyan]       X.Y.Z+0         (pure semantic, no suffix names)")
+    console.print("  [cyan]Non-prod:[/cyan]   X.Y.Z+B         (e.g., 3.0.4+77)")
+    console.print("                  X.Y.Z-suffix+B  (e.g., 3.0.4-qa-2+79)\n")
+    console.print("  Bumping adds flavor suffix if missing: 3.0.4+77 → 3.0.4-qa-1+78\n")
+
+    console.print("[bold]ENVIRONMENT[/bold]")
+    console.print("  .env.{flavor}      Firebase app IDs for each flavor")
+    console.print("  APPIDANDROID        Firebase App ID for Android")
+    console.print("  APPIDIOS            Firebase App ID for iOS\n")
+    console.print("  [dim]Example: .env.qa[/dim]")
+    console.print("  APPIDANDROID=1:123456:android:abcdef...")
+    console.print("  APPIDIOS=1:987654:ios:fedcba...\n")
+
+    console.print("[bold]MORE INFO[/bold]")
+    console.print("  fship init                # Setup guide")
+    console.print("  fship validate            # Check config")
+    console.print("  fship release --help      # Release help\n")
+
+
+@app.command()
 def version():
     """Show fship version."""
     from fship import __version__
