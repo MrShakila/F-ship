@@ -104,6 +104,7 @@ def run_release(
     resume_from: str = None,
     auto_rollback: bool = True,
     parallel_builds: bool = False,
+    known_flavors: set = None,
 ) -> bool:
     """Orchestrate full release flow."""
 
@@ -111,7 +112,7 @@ def run_release(
 
     try:
         current_version = read_version()
-        new_version = resolve_version(current_version, version, bump, flavor)
+        new_version = resolve_version(current_version, version, bump, flavor, known_flavors)
 
         # shared state: build step writes ipa_built, distribute step reads it
         build_state = {"ipa_built": False}
@@ -244,6 +245,7 @@ def run_multi_release(
             version=version, bump=bump,
             skip_build=skip_build, skip_distribute=skip_distribute,
             no_push=no_push,
+            known_flavors=set(config.flavors.keys()),
         )
 
     console.rule("[bold]Multi-Release Summary[/bold]")

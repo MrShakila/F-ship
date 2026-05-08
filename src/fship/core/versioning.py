@@ -85,11 +85,17 @@ def format_version(major: int, minor: int, patch: int, build: int) -> str:
     return f"{major}.{minor}.{patch}+{build}"
 
 
-def bump_flavor_version(current: str, flavor: str = "qa") -> str:
+def bump_flavor_version(current: str, flavor: str = "qa", known_flavors: set = None) -> str:
     """Bump non-prod flavor version: increment suffix number and build.
 
-    For 3.0.4-qa-1+78 → 3.0.4-qa-2+79
-    For 3.0.4+77 (no suffix) → 3.0.4-qa-1+78
+    Rules:
+    - No suffix: add flavor + counter           3.0.4+77      → 3.0.4-qa-1+78
+    - Suffix is this flavor: increment counter  3.0.4-qa-1+78 → 3.0.4-qa-2+79
+    - Suffix is another flavor: replace it      3.0.4-qa-1+78 (uat) → 3.0.4-uat-1+79
+    - Suffix is custom (not a flavor): keep it  3.0.4-claim-1+78 → 3.0.4-claim-2+79
+
+    known_flavors: set of configured flavor names used to distinguish flavor vs custom suffixes.
+    If None or suffix not in known_flavors, treated as custom (preserved).
 
     Raises:
         VersionError: If parsing fails
@@ -104,14 +110,36 @@ def bump_flavor_version(current: str, flavor: str = "qa") -> str:
         if "-" not in semantic_part:
             return f"{semantic_part}-{flavor}-1+{build + 1}"
 
-        base, suffix = semantic_part.rsplit("-", 1)
-        try:
-            suffix_num = int(suffix)
-            new_suffix = str(suffix_num + 1)
-        except ValueError:
-            raise VersionError(f"Can't parse flavor suffix: {suffix!r}")
+        # Split into base semver and suffix (e.g. "3.0.4-qa-1" → "3.0.4", "qa-1")
+        base_semver, suffix_full = semantic_part.split("-", 1)
+        # Split suffix into name and number (e.g. "qa-1" → "qa", "1")
+        suffix_parts = suffix_full.rsplit("-", 1)
 
-        return f"{base}-{new_suffix}+{build + 1}"
+        try:
+            if len(suffix_parts) == 2:
+                suffix_name, suffix_tail = suffix_parts
+                int(suffix_tail)  # validate tail is numeric
+            else:
+                # No numeric tail — treat as unsupported format
+                raise ValueError("no numeric suffix")
+        except ValueError:
+            raise VersionError(f"Can't parse flavor suffix: {suffix_full!r}")
+
+        suffix_num = int(suffix_tail)
+        is_flavor_suffix = known_flavors is not None and suffix_name in known_flavors
+
+        if suffix_name == flavor:
+            # Same flavor: increment counter
+            return f"{base_semver}-{flavor}-{suffix_num + 1}+{build + 1}"
+        elif is_flavor_suffix:
+            # Different flavor suffix: replace with current flavor, reset counter
+            return f"{base_semver}-{flavor}-1+{build + 1}"
+        else:
+            # Custom suffix: preserve it, just increment counter
+            return f"{base_semver}-{suffix_name}-{suffix_num + 1}+{build + 1}"
+
+    except VersionError:
+        raise
     except Exception as e:
         raise VersionError(f"Failed to bump flavor version: {e}")
 
@@ -143,14 +171,17 @@ def bump_version(current: str, part: str) -> str:
         raise VersionError(f"Failed to bump version: {e}")
 
 
-def resolve_version(current: str, version: str = None, bump: str = None, flavor: str = None) -> str:
+def resolve_version(current: str, version: str = None, bump: str = None, flavor: str = None, known_flavors: set = None) -> str:
     """Resolve new version from flags or interactive prompt.
 
     Version format:
     - Prod: Pure semantic X.Y.Z+0 (no suffix names)
     - Non-prod: With suffix (e.g., 3.0.4-claim-2+79) or create one
-    - If has custom suffix: bump it (qa, uat, or anything else)
-    - If no suffix and not prod: add flavor name as suffix
+    - Flavor suffix (qa/uat/etc): replaced when running different flavor
+    - Custom suffix (claim/etc): preserved across all flavors
+
+    known_flavors: set of configured flavor names (e.g. {"qa", "uat", "prod"}).
+    Used to distinguish flavor suffixes from custom ones.
 
     Raises:
         VersionError: If resolved version invalid
@@ -164,7 +195,7 @@ def resolve_version(current: str, version: str = None, bump: str = None, flavor:
         if flavor == "prod":
             new_version = bump_version(current, bump)
         else:
-            new_version = bump_flavor_version(current, flavor)
+            new_version = bump_flavor_version(current, flavor, known_flavors)
         console.print(f"[cyan]{current}[/cyan] → [green]{new_version}[/green]")
         return new_version
 
@@ -174,7 +205,7 @@ def resolve_version(current: str, version: str = None, bump: str = None, flavor:
     if flavor == "prod":
         suggested = bump_version(current, "patch")
     else:
-        suggested = bump_flavor_version(current, flavor)
+        suggested = bump_flavor_version(current, flavor, known_flavors)
 
     console.print(f"  [green]1) bump:[/green] {suggested}")
     choice = Prompt.ask("Select 1 or enter version")

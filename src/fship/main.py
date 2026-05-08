@@ -87,6 +87,7 @@ def release(
         no_push=no_push,
         resume_from=resume_from,
         parallel_builds=parallel,
+        known_flavors=set(config.flavors.keys()),
     )
 
     raise typer.Exit(0 if success else 1)
