@@ -126,9 +126,21 @@ def resolve_version(current: str, version: str = None, bump: str = None) -> str:
 
     console.print(f"Current version: [cyan]{current}[/cyan]")
     console.print(f"[dim]Suggested bumps:[/dim]")
-    console.print(f"  [green]patch:[/green] {bump_version(current, 'patch')}")
-    console.print(f"  [green]minor:[/green] {bump_version(current, 'minor')}")
-    console.print(f"  [green]major:[/green] {bump_version(current, 'major')}")
-    new_version = Prompt.ask("New version")
-    validate_version_format(new_version)
-    return new_version
+    patch_version = bump_version(current, 'patch')
+    minor_version = bump_version(current, 'minor')
+    major_version = bump_version(current, 'major')
+    console.print(f"  [green]1) patch:[/green] {patch_version}")
+    console.print(f"  [green]2) minor:[/green] {minor_version}")
+    console.print(f"  [green]3) major:[/green] {major_version}")
+
+    choice = Prompt.ask("Select (1-3) or enter version")
+
+    if choice == "1":
+        return patch_version
+    elif choice == "2":
+        return minor_version
+    elif choice == "3":
+        return major_version
+    else:
+        validate_version_format(choice)
+        return choice
