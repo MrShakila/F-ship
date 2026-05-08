@@ -117,8 +117,9 @@ def distribute_step(flavor_config: FlavorConfig) -> bool:
 def show_summary(version: str, flavor: str, no_push: bool = False) -> None:
     """Display summary table of what was done."""
     has_flavor_suffix = "-" in version.split("+")[0]
-    commit_msg = f"chore: release {version}" if has_flavor_suffix else f"chore: release {version}-{flavor}"
-    tag_name = f"v{version}" if has_flavor_suffix else f"v{version}-{flavor}"
+    is_prod = flavor == "prod"
+    commit_msg = f"chore: release {version}" if (has_flavor_suffix or is_prod) else f"chore: release {version}-{flavor}"
+    tag_name = f"v{version}" if (has_flavor_suffix or is_prod) else f"v{version}-{flavor}"
 
     table = Table(title=f"Release Summary: {version} → {flavor}")
     table.add_column("Component", style="cyan")

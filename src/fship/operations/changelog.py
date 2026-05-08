@@ -120,7 +120,8 @@ def git_add_and_commit(version: str, flavor: str) -> bool:
         subprocess.run(["git", "add"] + files_to_add, check=True)
 
         has_flavor_suffix = "-" in version.split("+")[0]
-        if has_flavor_suffix:
+        is_prod = flavor == "prod"
+        if has_flavor_suffix or is_prod:
             commit_msg = f"chore: release {version}"
         else:
             commit_msg = f"chore: release {version}-{flavor}"
@@ -142,7 +143,8 @@ def git_tag(version: str, flavor: str) -> bool:
         DistributionError: If tagging fails
     """
     has_flavor_suffix = "-" in version.split("+")[0]
-    tag = f"v{version}" if has_flavor_suffix else f"v{version}-{flavor}"
+    is_prod = flavor == "prod"
+    tag = f"v{version}" if (has_flavor_suffix or is_prod) else f"v{version}-{flavor}"
     try:
         subprocess.run(["git", "tag", tag], check=True)
         console.print(f"[green]✓[/green] Tagged: {tag}")

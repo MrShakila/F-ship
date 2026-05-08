@@ -146,8 +146,11 @@ def bump_version(current: str, part: str) -> str:
 def resolve_version(current: str, version: str = None, bump: str = None, flavor: str = None) -> str:
     """Resolve new version from flags or interactive prompt.
 
-    For non-prod flavors (qa, uat, custom): bump suffix + build number
-    For prod: use semantic versioning (patch, minor, major)
+    Version format:
+    - Prod: Pure semantic X.Y.Z+0 (no suffix names)
+    - Non-prod: With suffix (e.g., 3.0.4-claim-2+79) or create one
+    - If has custom suffix: bump it (qa, uat, or anything else)
+    - If no suffix and not prod: add flavor name as suffix
 
     Raises:
         VersionError: If resolved version invalid
@@ -156,11 +159,9 @@ def resolve_version(current: str, version: str = None, bump: str = None, flavor:
         validate_version_format(version)
         return version
 
-    is_prod = flavor == "prod"
-
     if bump:
         validate_bump_part(bump)
-        if is_prod:
+        if flavor == "prod":
             new_version = bump_version(current, bump)
         else:
             new_version = bump_flavor_version(current, flavor)
@@ -170,26 +171,15 @@ def resolve_version(current: str, version: str = None, bump: str = None, flavor:
     console.print(f"Current version: [cyan]{current}[/cyan]")
     console.print(f"[dim]Suggested bumps:[/dim]")
 
-    if is_prod:
-        patch_version = bump_version(current, 'patch')
-        minor_version = bump_version(current, 'minor')
-        major_version = bump_version(current, 'major')
-        console.print(f"  [green]1) patch:[/green] {patch_version}")
-        console.print(f"  [green]2) minor:[/green] {minor_version}")
-        console.print(f"  [green]3) major:[/green] {major_version}")
-        choice = Prompt.ask("Select (1-3) or enter version")
-        if choice == "1":
-            return patch_version
-        elif choice == "2":
-            return minor_version
-        elif choice == "3":
-            return major_version
+    if flavor == "prod":
+        suggested = bump_version(current, "patch")
     else:
-        flavor_bumped = bump_flavor_version(current, flavor)
-        console.print(f"  [green]1) flavor bump:[/green] {flavor_bumped}")
-        choice = Prompt.ask("Select 1 or enter version")
-        if choice == "1":
-            return flavor_bumped
+        suggested = bump_flavor_version(current, flavor)
+
+    console.print(f"  [green]1) bump:[/green] {suggested}")
+    choice = Prompt.ask("Select 1 or enter version")
+    if choice == "1":
+        return suggested
 
     validate_version_format(choice)
     return choice
