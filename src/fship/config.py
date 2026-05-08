@@ -36,22 +36,36 @@ DEFAULT_CFG = {
 
 
 def load_env_file() -> None:
-    """Load environment variables from .env.dev if it exists."""
-    if not ENV_FILE.exists():
+    """Load environment variables from .env.* files (dev, qa, uat, prod)."""
+    env_files = [
+        Path.cwd() / ".env.dev",
+        Path.cwd() / ".env.qa",
+        Path.cwd() / ".env.uat",
+        Path.cwd() / ".env.prod",
+    ]
+
+    if not any(f.exists() for f in env_files):
         _create_env_template()
         return
 
-    try:
-        for line in ENV_FILE.read_text().strip().split("\n"):
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            if "=" in line:
-                key, value = line.split("=", 1)
-                os.environ[key.strip()] = value.strip().strip("'\"")
-        console.print(f"[dim]Loaded env from {ENV_FILE}[/dim]")
-    except Exception as e:
-        console.print(f"[yellow]Warning: Failed to load {ENV_FILE}: {e}[/yellow]")
+    loaded = []
+    for env_file in env_files:
+        if not env_file.exists():
+            continue
+        try:
+            for line in env_file.read_text().strip().split("\n"):
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    key, value = line.split("=", 1)
+                    os.environ[key.strip()] = value.strip().strip("'\"")
+            loaded.append(env_file.name)
+        except Exception as e:
+            console.print(f"[yellow]Warning: Failed to load {env_file}: {e}[/yellow]")
+
+    if loaded:
+        console.print(f"[dim]Loaded env from: {', '.join(loaded)}[/dim]")
 
 
 def _create_env_template() -> None:
@@ -65,13 +79,18 @@ APPIDANDROID_PROD=
 """
     ENV_FILE.write_text(template)
     console.print(f"[yellow]⚠  Created template: {ENV_FILE}[/yellow]")
-    console.print(f"[yellow]Please edit and add your Android app IDs:[/yellow]")
+    console.print(f"[yellow]Setup options:[/yellow]")
+    console.print(f"[dim]Option 1: One file for all flavors (.env.dev)[/dim]")
     console.print(f"[dim]  APPIDANDROID_QA=1:123456:android:abcdef...[/dim]")
     console.print(f"[dim]  APPIDANDROID_UAT=1:345678:android:ghijkl...[/dim]")
     console.print(f"[dim]  APPIDANDROID_PROD=1:789012:android:mnopqr...[/dim]")
+    console.print(f"[dim]Option 2: Flavor-specific files (.env.qa, .env.uat, .env.prod)[/dim]")
+    console.print(f"[dim]  .env.qa:   APPIDANDROID_QA=1:123456:android:abcdef...[/dim]")
+    console.print(f"[dim]  .env.uat:  APPIDANDROID_UAT=1:345678:android:ghijkl...[/dim]")
+    console.print(f"[dim]  .env.prod: APPIDANDROID_PROD=1:789012:android:mnopqr...[/dim]")
     console.print(f"[dim]Get values from: Firebase Console > App settings[/dim]")
     console.print()
-    raise SystemExit("Configure .env.dev and run again")
+    raise SystemExit("Configure .env files and run again")
 
 
 @dataclass
