@@ -125,6 +125,10 @@ def resolve_version(current: str, version: str = None, bump: str = None) -> str:
         return new_version
 
     console.print(f"Current version: [cyan]{current}[/cyan]")
+    console.print(f"[dim]Suggested bumps:[/dim]")
+    console.print(f"  [green]patch:[/green] {bump_version(current, 'patch')}")
+    console.print(f"  [green]minor:[/green] {bump_version(current, 'minor')}")
+    console.print(f"  [green]major:[/green] {bump_version(current, 'major')}")
     new_version = Prompt.ask("New version")
     validate_version_format(new_version)
     return new_version
