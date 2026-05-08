@@ -110,11 +110,23 @@ fship release qa --skip-build --skip-distribute
 - Flutter SDK
 - Firebase CLI: `npm install -g firebase-tools`
 - git-chglog: `brew install git-chglog` (macOS) or `npm install -g git-chglog`
-- Environment variables: `FIREBASE_QA_APP_ID`, `FIREBASE_UAT_APP_ID`, etc.
+
+## Environment Setup
+
+Create `.env.dev` in your Flutter project root with Firebase app IDs:
 
 ```bash
+# .env.dev (add to .gitignore)
+FIREBASE_QA_APP_ID=1:123456:android:abcdef...
+FIREBASE_UAT_APP_ID=1:345678:android:ghijkl...
+FIREBASE_PROD_APP_ID=1:789012:android:mnopqr...
+```
+
+fship automatically loads from `.env.dev` when you run `fship release`.
+
+Alternatively, export as environment variables:
+```bash
 export FIREBASE_QA_APP_ID=1:123456:android:abcdef...
-export FIREBASE_PROD_APP_ID=1:789012:android:ghijkl...
 ```
 
 ## Commands
