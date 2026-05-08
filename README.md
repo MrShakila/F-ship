@@ -144,3 +144,4 @@ cd ~/Projects/fship
 pip install -e ".[dev]"  # future: add pytest, black, etc.
 fship --help
 ```
+# F-ship
