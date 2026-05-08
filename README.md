@@ -8,6 +8,14 @@ fship release qa --version 1.2.4+46  # Exact version
 fship release qa --bump patch       # Auto-increment patch
 ```
 
+## Quick Start
+
+1. **Install**: `pip install fship`
+2. **Initialize**: `cd /path/to/flutter/project && fship init`
+3. **Configure**: Edit `fship.yaml` with your Firebase app IDs
+4. **Validate**: `fship validate`
+5. **Release**: `fship release qa` (or your flavor name)
+
 ## What It Does (Full Flow)
 
 1. **Bump version** in `pubspec.yaml` (interactive or auto)
@@ -20,8 +28,15 @@ fship release qa --bump patch       # Auto-increment patch
 
 ## Installation
 
+**Via PyPI (Recommended)**
 ```bash
-cd ~/Projects/fship
+pip install fship
+```
+
+**From Source (Development)**
+```bash
+git clone https://github.com/MrShakila/F-ship.git
+cd F-ship
 pip install -e .
 ```
 
@@ -140,8 +155,8 @@ npm install -g git-chglog
 ## Development
 
 ```bash
-cd ~/Projects/fship
-pip install -e ".[dev]"  # future: add pytest, black, etc.
+git clone https://github.com/MrShakila/F-ship.git
+cd F-ship
+pip install -e .
 fship --help
 ```
-# F-ship
