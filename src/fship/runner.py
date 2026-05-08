@@ -72,7 +72,8 @@ def _build_parallel(flavor: str, flavor_config: FlavorConfig) -> tuple[bool, boo
     def build_ipa_thread():
         try:
             from fship.operations.builder import build_ipa
-            success, ipa_path = build_ipa(flavor, flavor_config.entrypoint)
+            export_method = "app-store" if flavor == "prod" else "ad-hoc"
+            success, ipa_path = build_ipa(flavor, flavor_config.entrypoint, export_method)
             ipa_result[0] = success
             if success:
                 console.print(f"[green]✓[/green] IPA ready: {ipa_path or 'built'}")
@@ -134,7 +135,8 @@ def run_release(
                 # Build IPA sequentially if configured
                 if has_ios:
                     from fship.operations.builder import build_ipa
-                    ipa_ok, ipa_path = build_ipa(flavor, flavor_config.entrypoint)
+                    export_method = "app-store" if flavor == "prod" else "ad-hoc"
+                    ipa_ok, ipa_path = build_ipa(flavor, flavor_config.entrypoint, export_method)
                     build_state["ipa_built"] = ipa_ok
                     if ipa_ok:
                         console.print(f"[green]✓[/green] IPA ready: {ipa_path or 'built'}")

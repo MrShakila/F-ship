@@ -146,8 +146,11 @@ def find_built_aab(flavor: str) -> Path | None:
     return None
 
 
-def build_ipa(flavor: str, entrypoint: str) -> tuple[bool, str]:
+def build_ipa(flavor: str, entrypoint: str, export_method: str = "ad-hoc") -> tuple[bool, str]:
     """Build Flutter IPA for iOS.
+
+    Args:
+        export_method: 'ad-hoc' for Firebase distribution, 'app-store' for prod
 
     Returns:
         (success, ipa_path)
@@ -165,6 +168,8 @@ def build_ipa(flavor: str, entrypoint: str) -> tuple[bool, str]:
         flavor,
         "-t",
         entrypoint,
+        "--export-method",
+        export_method,
     ]
 
     try:
