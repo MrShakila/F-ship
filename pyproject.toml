@@ -6,6 +6,9 @@ build-backend = "hatchling.build"
 name = "fship"
 version = "0.1.0"
 description = "Flutter Ship — orchestrate release workflows to Firebase App Distribution"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "Shakila", email = "shadikari012@gmail.com"}]
 requires-python = ">=3.11"
 dependencies = [
     "typer[all]>=0.12",
@@ -13,6 +16,11 @@ dependencies = [
     "pyyaml>=6.0",
     "ruamel.yaml>=0.18",
 ]
+
+[project.urls]
+Homepage = "https://github.com/MrShakila/F-ship"
+Repository = "https://github.com/MrShakila/F-ship"
+Issues = "https://github.com/MrShakila/F-ship/issues"
 
 [project.scripts]
 fship = "fship.main:app"
