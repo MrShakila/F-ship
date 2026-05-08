@@ -33,8 +33,11 @@ def distribute_to_firebase(
     if not app_id:
         raise DistributionError(
             f"Environment variable {firebase_app_id_env_android} not set. "
-            f"Add to .env.dev: {firebase_app_id_env_android}=<your-app-id>"
+            f"Add to .env.{{flavor}}: {firebase_app_id_env_android}=<your-app-id>"
         )
+
+    masked = app_id[:12] + "..." + app_id[-6:] if len(app_id) > 18 else app_id
+    console.print(f"[dim]Using {firebase_app_id_env_android}: {masked}[/dim]")
 
     try:
         validate_firebase_app_id(app_id)

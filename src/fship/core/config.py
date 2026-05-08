@@ -68,6 +68,8 @@ def load_env_file(flavor: str = None) -> None:
     if flavor:
         env_file = Path.cwd() / f".env.{flavor}"
         if not env_file.exists():
+            console.print(f"[yellow]⚠ .env.{flavor} not found at {env_file}[/yellow]")
+            console.print(f"[yellow]  Using system environment variables (may be wrong)[/yellow]")
             return
         env_files_to_load = [env_file]
     else:
