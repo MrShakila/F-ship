@@ -75,6 +75,8 @@ def release(
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
 
+    parallel = os.getenv("FSHIP_PARALLEL_BUILDS", "").lower() in ("1", "true")
+
     success = run_release(
         flavor,
         flavor_config,
@@ -84,9 +86,152 @@ def release(
         skip_distribute=skip_distribute,
         no_push=no_push,
         resume_from=resume_from,
+        parallel_builds=parallel,
     )
 
     raise typer.Exit(0 if success else 1)
+
+
+@app.command()
+def status(
+    flavor: str = typer.Argument(None, help="Flavor to check (optional)"),
+):
+    """Show current version, last release, and pending commits."""
+    try:
+        from fship.core.versioning import read_version
+        current = read_version()
+        console.print(f"[bold]Current version:[/bold] [cyan]{current}[/cyan]")
+    except Exception as e:
+        console.print(f"[yellow]Version: unknown ({e})[/yellow]")
+
+    try:
+        result = subprocess.run(
+            ["git", "tag", "--sort=-version:refname"],
+            capture_output=True, text=True, check=False,
+        )
+        tags = [t.strip() for t in result.stdout.strip().split("\n") if t.strip()]
+        if flavor:
+            tags = [t for t in tags if flavor in t or t.startswith("v") and "-" not in t]
+        last_tag = tags[0] if tags else None
+
+        if last_tag:
+            console.print(f"[bold]Last release:[/bold] [green]{last_tag}[/green]")
+            date_result = subprocess.run(
+                ["git", "log", "-1", "--format=%ar", last_tag],
+                capture_output=True, text=True, check=False,
+            )
+            if date_result.returncode == 0:
+                console.print(f"[bold]Released:[/bold] {date_result.stdout.strip()}")
+
+            count_result = subprocess.run(
+                ["git", "rev-list", "--count", f"{last_tag}..HEAD"],
+                capture_output=True, text=True, check=False,
+            )
+            if count_result.returncode == 0:
+                count = count_result.stdout.strip()
+                console.print(f"[bold]Pending commits:[/bold] {count}")
+        else:
+            console.print("[dim]No releases found.[/dim]")
+    except Exception as e:
+        console.print(f"[yellow]Git info unavailable: {e}[/yellow]")
+
+
+@app.command("pre-check")
+def pre_check(
+    flavor: str = typer.Argument(..., help="Flavor to validate"),
+):
+    """Run pre-release checks: Flutter, Firebase credentials, config."""
+    console.rule(f"[bold cyan]Pre-release checks for {flavor}[/bold cyan]")
+    all_ok = True
+
+    try:
+        config = load_config(flavor)
+        flavor_config = get_flavor(config, flavor)
+        console.print(f"[green]✓[/green] Config: flavor '{flavor}' found")
+    except FshipError as e:
+        console.print(f"[red]✗ Config: {e}[/red]")
+        raise typer.Exit(1)
+
+    result = subprocess.run(["flutter", "--version"], capture_output=True, text=True)
+    if result.returncode == 0:
+        version_line = result.stdout.split("\n")[0]
+        console.print(f"[green]✓[/green] Flutter: {version_line}")
+    else:
+        console.print("[red]✗ Flutter not found[/red]")
+        all_ok = False
+
+    result = subprocess.run(["firebase", "--version"], capture_output=True, text=True)
+    if result.returncode == 0:
+        console.print(f"[green]✓[/green] Firebase CLI: {result.stdout.strip()}")
+    else:
+        console.print("[red]✗ Firebase CLI not found (npm install -g firebase-tools)[/red]")
+        all_ok = False
+
+    android_id = os.getenv(flavor_config.firebase_app_id_env_android)
+    ios_id = os.getenv(flavor_config.firebase_app_id_env_ios)
+    if android_id:
+        console.print(f"[green]✓[/green] APPIDANDROID: set")
+    else:
+        console.print(f"[red]✗ APPIDANDROID not set in .env.{flavor}[/red]")
+        all_ok = False
+    if ios_id:
+        console.print(f"[green]✓[/green] APPIDIOS: set")
+    else:
+        console.print(f"[yellow]⚠[/yellow] APPIDIOS not set (iOS distribution will be skipped)")
+
+    from pathlib import Path as _Path
+    apk = _Path(flavor_config.apk_path)
+    if apk.exists():
+        console.print(f"[green]✓[/green] APK exists: {apk}")
+    else:
+        console.print(f"[yellow]⚠[/yellow] APK not built yet: {apk}")
+
+    console.print()
+    if all_ok:
+        console.print("[bold green]✓ All checks passed. Ready to release.[/bold green]")
+    else:
+        console.print("[bold red]✗ Issues found. Fix before releasing.[/bold red]")
+    raise typer.Exit(0 if all_ok else 1)
+
+
+@app.command("multi-release")
+def multi_release(
+    flavors: str = typer.Argument(..., help="Comma-separated flavors (e.g., qa,uat)"),
+    bump: str = typer.Option(None, "--bump", "-b", help="Auto-bump: patch, minor, or major"),
+    skip_build: bool = typer.Option(False, "--skip-build"),
+    skip_distribute: bool = typer.Option(False, "--skip-distribute"),
+    no_push: bool = typer.Option(False, "--no-push"),
+):
+    """Release multiple flavors in sequence.
+
+    Example:
+        fship multi-release qa,uat --bump patch
+    """
+    from fship.runner import run_multi_release
+
+    flavor_list = [f.strip() for f in flavors.split(",") if f.strip()]
+    if not flavor_list:
+        console.print("[red]No flavors specified.[/red]")
+        raise typer.Exit(1)
+
+    try:
+        config = load_config()
+        if bump:
+            validate_bump_part(bump)
+    except FshipError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    results = run_multi_release(
+        flavor_list, config,
+        bump=bump,
+        skip_build=skip_build,
+        skip_distribute=skip_distribute,
+        no_push=no_push,
+    )
+
+    all_ok = all(results.values())
+    raise typer.Exit(0 if all_ok else 1)
 
 
 @app.command()

@@ -196,6 +196,50 @@ fship release qa --resume-from distribute  # Retry distribution only
 
 Steps: `version`, `changelog`, `notes`, `tag`, `build`, `distribute`
 
+If release fails after git commit/tag, fship **auto-rolls back** the version bump and deletes the tag so you can retry cleanly.
+
+### Pre-Release Checks
+
+```bash
+fship pre-check qa
+# ✓ Config: flavor 'qa' found
+# ✓ Flutter: Flutter 3.x.x
+# ✓ Firebase CLI: 13.x.x
+# ✓ APPIDANDROID: set
+# ⚠ APPIDIOS not set (iOS distribution will be skipped)
+```
+
+### Release Status
+
+```bash
+fship status qa
+# Current version: 3.0.4-qa-2+79
+# Last release: v3.0.4-qa-2+79
+# Released: 2 days ago
+# Pending commits: 3
+```
+
+### Multi-Flavor Release
+
+```bash
+fship multi-release qa,uat --bump patch
+# Releases qa first, then uat
+# Shows per-flavor success/failure summary
+```
+
+### Android App Bundle (Play Store)
+
+Build AAB directly using Flutter's appbundle target. The `build_aab` function in `operations/builder.py` handles this — wire it into a custom step or extend the release flow.
+
+### Parallel iOS + Android Builds
+
+Set environment variable to enable parallel builds:
+
+```bash
+FSHIP_PARALLEL_BUILDS=1 fship release qa
+# Builds APK and IPA simultaneously using threads
+```
+
 ## Environment Setup
 
 ### Option 1: Single .env.dev file (for development)
@@ -266,6 +310,14 @@ FLAVOR                         # Required: qa, uat, prod, or custom flavor
 --skip-distribute             # Skip Firebase distribution step
 --no-push                     # Commit and tag locally, don't push to remote
 --resume-from STEP            # Resume from failed step (skip earlier steps)
+```
+
+### Other Commands
+
+```bash
+fship status [flavor]                      # Current version, last release, pending commits
+fship pre-check <flavor>                   # Pre-release checks (Flutter, Firebase, credentials)
+fship multi-release <flavors> [OPTIONS]    # Release multiple flavors in sequence
 ```
 
 ### Release Examples
