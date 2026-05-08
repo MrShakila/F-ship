@@ -116,15 +116,31 @@ def run_release(
         build_state = {"ipa_built": False}
 
         def build_step():
-            if parallel_builds:
+            has_ios = bool(flavor_config.ipa_path and flavor_config.firebase_app_id_env_ios)
+
+            if parallel_builds and has_ios:
                 console.print("[dim]Building APK + IPA in parallel...[/dim]")
                 apk_ok, ipa_ok = _build_parallel(flavor, flavor_config)
                 build_state["ipa_built"] = ipa_ok
                 return apk_ok
             else:
+                # Build APK
                 success, apk_path = build_apk(flavor, flavor_config.entrypoint)
                 if success:
                     console.print(f"[green]✓[/green] APK ready: {apk_path or 'built'}")
+                else:
+                    return False
+
+                # Build IPA sequentially if configured
+                if has_ios:
+                    from fship.operations.builder import build_ipa
+                    ipa_ok, ipa_path = build_ipa(flavor, flavor_config.entrypoint)
+                    build_state["ipa_built"] = ipa_ok
+                    if ipa_ok:
+                        console.print(f"[green]✓[/green] IPA ready: {ipa_path or 'built'}")
+                    else:
+                        console.print("[yellow]⚠[/yellow] IPA build failed (Android-only distribution)")
+
                 return success
 
         def distribute_both_step():
