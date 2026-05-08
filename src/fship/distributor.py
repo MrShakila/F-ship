@@ -18,7 +18,8 @@ def distribute_to_firebase(
     if not app_id:
         console.print(
             f"[red]✗ Environment variable {firebase_app_id_env} not set.[/red]\n"
-            f"[dim]Export it: export {firebase_app_id_env}=<your-app-id>[/dim]"
+            f"[dim]Add to .env.dev: {firebase_app_id_env}=<your-app-id>[/dim]\n"
+            f"[dim]Or export: export {firebase_app_id_env}=<your-app-id>[/dim]"
         )
         return False
 

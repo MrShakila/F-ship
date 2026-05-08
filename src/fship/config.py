@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -8,6 +9,7 @@ console = Console()
 
 CONFIG_DIR = Path.cwd() / ".config"
 CONFIG_FILE = CONFIG_DIR / "fship.json"
+ENV_FILE = Path.cwd() / ".env.dev"
 
 DEFAULT_CFG = {
     "flavors": {
@@ -33,6 +35,24 @@ DEFAULT_CFG = {
 }
 
 
+def load_env_file() -> None:
+    """Load environment variables from .env.dev if it exists."""
+    if not ENV_FILE.exists():
+        return
+
+    try:
+        for line in ENV_FILE.read_text().strip().split("\n"):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, value = line.split("=", 1)
+                os.environ[key.strip()] = value.strip().strip("'\"")
+        console.print(f"[dim]Loaded env from {ENV_FILE}[/dim]")
+    except Exception as e:
+        console.print(f"[yellow]Warning: Failed to load {ENV_FILE}: {e}[/yellow]")
+
+
 @dataclass
 class FlavorConfig:
     firebase_app_id_env: str
@@ -48,6 +68,7 @@ class Config:
 
 def load_config() -> Config:
     """Load config from .config/fship.json or create with defaults."""
+    load_env_file()
     CONFIG_DIR.mkdir(exist_ok=True)
 
     if not CONFIG_FILE.exists():
