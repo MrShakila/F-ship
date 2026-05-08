@@ -1,6 +1,10 @@
+"""Git operations for changelog and tagging."""
+
 import subprocess
 from pathlib import Path
 from rich.console import Console
+
+from fship.errors import DistributionError
 
 console = Console()
 
@@ -8,18 +12,33 @@ console = Console()
 def get_previous_tag() -> str:
     """Get the previous tag, skipping the latest one."""
     try:
+        # Get the second-most recent tag
         result = subprocess.run(
-            [
-                "bash",
-                "-c",
-                "git describe --tags --abbrev=0 $(git rev-list --tags --skip=1 --max-count=1)",
-            ],
+            ["git", "describe", "--tags", "--abbrev=0"],
             capture_output=True,
             text=True,
             check=False,
         )
         if result.returncode == 0:
-            return result.stdout.strip()
+            current_tag = result.stdout.strip()
+
+            # Now get the one before that
+            result = subprocess.run(
+                ["git", "rev-list", "--tags", "--skip=1", "--max-count=1"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                commit = result.stdout.strip()
+                result = subprocess.run(
+                    ["git", "describe", "--tags", "--abbrev=0", commit],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if result.returncode == 0:
+                    return result.stdout.strip()
     except Exception:
         pass
     return ""
@@ -51,7 +70,11 @@ def generate_changelog() -> bool:
 
 
 def generate_release_notes(flavor: str) -> bool:
-    """Generate release_note.txt from git log since last tag."""
+    """Generate release_note.txt from git log since last tag.
+
+    Raises:
+        DistributionError: If git log fails
+    """
     prev_tag = get_previous_tag()
 
     if not prev_tag:
@@ -64,11 +87,7 @@ def generate_release_notes(flavor: str) -> bool:
 
     try:
         result = subprocess.run(
-            [
-                "bash",
-                "-c",
-                f'git log --pretty="- %s (%an)" {rev_range}',
-            ],
+            ["git", "log", "--pretty=- %s (%an)", rev_range],
             capture_output=True,
             text=True,
             check=True,
@@ -82,12 +101,15 @@ def generate_release_notes(flavor: str) -> bool:
         console.print("[green]✓[/green] release_note.txt generated")
         return True
     except subprocess.CalledProcessError as e:
-        console.print(f"[red]✗ Failed to generate release notes: {e}[/red]")
-        return False
+        raise DistributionError(f"Failed to generate release notes: {e}") from e
 
 
 def git_add_and_commit(version: str, flavor: str) -> bool:
-    """Stage and commit version bump + changelog. Only add files that exist."""
+    """Stage and commit version bump + changelog. Only add files that exist.
+
+    Raises:
+        DistributionError: If git operations fail
+    """
     try:
         files_to_add = ["pubspec.yaml"]
         if Path("CHANGELOG.md").exists():
@@ -103,17 +125,19 @@ def git_add_and_commit(version: str, flavor: str) -> bool:
         console.print(f"[green]✓[/green] Committed: chore: release {version}-{flavor}")
         return True
     except subprocess.CalledProcessError as e:
-        console.print(f"[red]✗ Git commit failed: {e}[/red]")
-        return False
+        raise DistributionError(f"Git commit failed: {e}") from e
 
 
 def git_tag(version: str, flavor: str) -> bool:
-    """Create git tag for release."""
+    """Create git tag for release.
+
+    Raises:
+        DistributionError: If tagging fails
+    """
     tag = f"v{version}-{flavor}"
     try:
         subprocess.run(["git", "tag", tag], check=True)
         console.print(f"[green]✓[/green] Tagged: {tag}")
         return True
     except subprocess.CalledProcessError as e:
-        console.print(f"[red]✗ Git tag failed: {e}[/red]")
-        return False
+        raise DistributionError(f"Git tag failed: {e}") from e

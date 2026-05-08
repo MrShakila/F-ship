@@ -1,20 +1,17 @@
 from pathlib import Path
 from rich.console import Console
 from rich.table import Table
-from fship.config import Config, FlavorConfig
-from fship.versioning import (
-    read_version,
-    write_version,
-    resolve_version,
-)
-from fship.changelog import (
+
+from fship.core import FlavorConfig, read_version, write_version, resolve_version
+from fship.operations import (
     generate_changelog,
     generate_release_notes,
     git_add_and_commit,
     git_tag,
+    build_apk,
+    distribute_to_firebase,
 )
-from fship.builder import build_apk
-from fship.distributor import distribute_to_firebase
+from fship.errors import FshipError
 
 console = Console()
 
@@ -57,8 +54,13 @@ def run_release(
 
         for step_name, step_fn in steps:
             console.print(f"\n[bold blue]→[/bold blue] {step_name}")
-            if not step_fn():
+            try:
+                if not step_fn():
+                    console.print(f"\n[bold red]Release stopped at: {step_name}[/bold red]")
+                    return False
+            except FshipError as e:
                 console.print(f"\n[bold red]Release stopped at: {step_name}[/bold red]")
+                console.print(f"[red]Error: {e}[/red]")
                 return False
 
         console.print(
@@ -67,8 +69,11 @@ def run_release(
         show_summary(new_version, flavor)
         return True
 
-    except Exception as e:
+    except FshipError as e:
         console.print(f"\n[bold red]Error: {e}[/bold red]")
+        return False
+    except Exception as e:
+        console.print(f"\n[bold red]Unexpected error: {e}[/bold red]")
         return False
 
 
@@ -79,22 +84,20 @@ def update_pubspec(version: str) -> bool:
         write_version(version)
         console.print(f"[green]✓[/green] pubspec.yaml: {current} → {version}")
         return True
-    except Exception as e:
+    except FshipError as e:
         console.print(f"[red]✗ Failed to update pubspec.yaml: {e}[/red]")
-        return False
+        raise
 
 
 def commit_and_tag(version: str, flavor: str) -> bool:
     """Stage, commit, and tag the release."""
-    if not git_add_and_commit(version, flavor):
-        return False
-    if not git_tag(version, flavor):
-        return False
+    git_add_and_commit(version, flavor)
+    git_tag(version, flavor)
     return True
 
 
-def build_apk_step(flavor: str, flavor_config: FlavorConfig) -> tuple[bool, str]:
-    """Build APK and return (success, apk_path)."""
+def build_apk_step(flavor: str, flavor_config: FlavorConfig) -> bool:
+    """Build APK and return success status."""
     success, apk_path = build_apk(flavor, flavor_config.entrypoint)
     if success:
         console.print(f"[green]✓[/green] APK ready: {apk_path or 'built'}")
@@ -103,13 +106,8 @@ def build_apk_step(flavor: str, flavor_config: FlavorConfig) -> tuple[bool, str]
 
 def distribute_step(flavor_config: FlavorConfig) -> bool:
     """Distribute APK to Firebase."""
-    apk_path = flavor_config.apk_path
-    if not Path(apk_path).exists():
-        console.print(f"[red]✗ APK path not found: {apk_path}[/red]")
-        return False
-
     return distribute_to_firebase(
-        apk_path,
+        flavor_config.apk_path,
         flavor_config.firebase_app_id_env,
         flavor_config.groups,
     )

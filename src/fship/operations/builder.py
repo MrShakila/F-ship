@@ -1,12 +1,33 @@
+"""Flutter APK building."""
+
 import subprocess
 from pathlib import Path
 from rich.console import Console
+
+from fship.errors import BuildError
+from fship.validation import validate_path_within_project
 
 console = Console()
 
 
 def build_apk(flavor: str, entrypoint: str) -> tuple[bool, str]:
-    """Build Flutter APK for flavor."""
+    """Build Flutter APK for flavor.
+
+    Args:
+        flavor: Flavor name
+        entrypoint: Path to entrypoint dart file
+
+    Returns:
+        (success, apk_path)
+
+    Raises:
+        BuildError: If build fails
+    """
+    try:
+        validate_path_within_project(entrypoint)
+    except Exception as e:
+        raise BuildError(f"Invalid entrypoint path: {e}")
+
     cmd = [
         "flutter",
         "build",
@@ -39,14 +60,12 @@ def build_apk(flavor: str, entrypoint: str) -> tuple[bool, str]:
             )
             return True, ""
 
-    except FileNotFoundError:
-        console.print(
-            "[red]✗ Flutter not found. Install Flutter SDK or add to PATH.[/red]"
-        )
-        return False, ""
+    except FileNotFoundError as e:
+        raise BuildError(
+            "Flutter not found. Install Flutter SDK or add to PATH."
+        ) from e
     except Exception as e:
-        console.print(f"[red]✗ Build failed: {e}[/red]")
-        return False, ""
+        raise BuildError(f"Build failed: {e}") from e
 
 
 def find_built_apk(flavor: str) -> Path | None:

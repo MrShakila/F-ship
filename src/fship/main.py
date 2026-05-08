@@ -1,12 +1,15 @@
 import typer
 import os
-import json
+import subprocess
 import sys
 from pathlib import Path
 from rich.console import Console
-from rich.prompt import Prompt
-from fship.config import load_config, get_flavor, CONFIG_FILE, CONFIG_DIR, save_config, DEFAULT_CFG
+
+from fship.core import load_config, get_flavor
+from fship.core.config import CONFIG_FILE, CONFIG_DIR, DEFAULT_CFG, save_config
 from fship.runner import run_release
+from fship.errors import FshipError, ValidationError
+from fship.validation import validate_bump_part
 
 app = typer.Typer(
     help="fship — Flutter Ship. Orchestrate release workflows to Firebase App Distribution.",
@@ -52,12 +55,13 @@ def release(
     try:
         config = load_config()
         flavor_config = get_flavor(config, flavor)
-    except (FileNotFoundError, ValueError) as e:
-        console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(1)
 
-    if bump and version:
-        console.print("[red]Error: Cannot specify both --version and --bump[/red]")
+        if bump:
+            validate_bump_part(bump)
+        if version and bump:
+            raise ValidationError("Cannot specify both --version and --bump")
+    except FshipError as e:
+        console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
 
     success = run_release(

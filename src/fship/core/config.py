@@ -1,9 +1,14 @@
+"""Configuration management with validation."""
+
 import json
 import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from rich.console import Console
+
+from fship.errors import ConfigError
+from fship.validation import validate_flavor_exists
 
 console = Console()
 
@@ -118,17 +123,21 @@ def load_config() -> Config:
     try:
         cfg = {**DEFAULT_CFG, **json.loads(CONFIG_FILE.read_text())}
     except json.JSONDecodeError as e:
-        console.print(f"[red]✗ Invalid JSON in {CONFIG_FILE}: {e}[/red]")
-        raise
+        raise ConfigError(f"Invalid JSON in {CONFIG_FILE}: {e}")
 
     flavors = {}
     for flavor_name, flavor_data in cfg.get("flavors", {}).items():
-        flavors[flavor_name] = FlavorConfig(
-            firebase_app_id_env=flavor_data["firebase_app_id_env"],
-            entrypoint=flavor_data["entrypoint"],
-            apk_path=flavor_data["apk_path"],
-            groups=flavor_data.get("groups", "testers"),
-        )
+        try:
+            flavors[flavor_name] = FlavorConfig(
+                firebase_app_id_env=flavor_data["firebase_app_id_env"],
+                entrypoint=flavor_data["entrypoint"],
+                apk_path=flavor_data["apk_path"],
+                groups=flavor_data.get("groups", "testers"),
+            )
+        except KeyError as e:
+            raise ConfigError(
+                f"Missing required key in flavor {flavor_name!r}: {e}"
+            )
 
     return Config(flavors=flavors)
 
@@ -147,24 +156,22 @@ def _ensure_gitignore() -> None:
     if not gitignore.exists():
         return
 
-    content = gitignore.read_text()
-    if ".config/" not in content:
-        gitignore.write_text(content.rstrip() + "\n.config/\n")
-
-
-def require_config(*keys: str) -> dict:
-    """Load config and exit if required keys missing."""
-    cfg = load_config()
-    missing = [k for k in keys if k not in cfg.flavors]
-    if missing:
-        console.print(f"[red]✗ Missing flavors: {', '.join(missing)}[/red]")
-        console.print(f"[dim]Edit: {CONFIG_FILE}[/dim]")
-        sys.exit(1)
-    return cfg.__dict__
+    try:
+        content = gitignore.read_text()
+        if ".config/" not in content:
+            gitignore.write_text(content.rstrip() + "\n.config/\n")
+    except Exception as e:
+        console.print(f"[yellow]Warning: Failed to update .gitignore: {e}[/yellow]")
 
 
 def get_flavor(config: Config, flavor: str) -> FlavorConfig:
-    if flavor not in config.flavors:
-        available = ", ".join(config.flavors.keys())
-        raise ValueError(f"Unknown flavor '{flavor}'. Available: {available}")
-    return config.flavors[flavor]
+    """Get flavor config with validation.
+
+    Raises:
+        ConfigError: If flavor not found
+    """
+    try:
+        validate_flavor_exists(flavor, {"flavors": config.flavors})
+        return config.flavors[flavor]
+    except Exception as e:
+        raise ConfigError(str(e))
