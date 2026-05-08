@@ -116,6 +116,10 @@ def distribute_step(flavor_config: FlavorConfig) -> bool:
 
 def show_summary(version: str, flavor: str, no_push: bool = False) -> None:
     """Display summary table of what was done."""
+    has_flavor_suffix = "-" in version.split("+")[0]
+    commit_msg = f"chore: release {version}" if has_flavor_suffix else f"chore: release {version}-{flavor}"
+    tag_name = f"v{version}" if has_flavor_suffix else f"v{version}-{flavor}"
+
     table = Table(title=f"Release Summary: {version} → {flavor}")
     table.add_column("Component", style="cyan")
     table.add_column("Status", style="green")
@@ -123,8 +127,8 @@ def show_summary(version: str, flavor: str, no_push: bool = False) -> None:
     table.add_row("Version Bumped", "pubspec.yaml updated")
     table.add_row("Changelog", "CHANGELOG.md generated")
     table.add_row("Release Notes", "release_note.txt generated")
-    table.add_row("Git Commit", f"chore: release {version}-{flavor}")
-    table.add_row("Git Tag", f"v{version}-{flavor}")
+    table.add_row("Git Commit", commit_msg)
+    table.add_row("Git Tag", tag_name)
     table.add_row("Build", "APK compiled")
     table.add_row("Distribution", f"Firebase App Distribution")
 
@@ -132,4 +136,4 @@ def show_summary(version: str, flavor: str, no_push: bool = False) -> None:
 
     if no_push:
         console.print("\n[yellow]⚠ Changes committed and tagged locally.[/yellow]")
-        console.print("[dim]Push manually: git push origin main && git push origin v{version}-{flavor}[/dim]")
+        console.print(f"[dim]Push manually: git push origin main && git push origin {tag_name}[/dim]")

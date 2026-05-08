@@ -118,11 +118,18 @@ def git_add_and_commit(version: str, flavor: str) -> bool:
             files_to_add.append("release_note.txt")
 
         subprocess.run(["git", "add"] + files_to_add, check=True)
+
+        has_flavor_suffix = "-" in version.split("+")[0]
+        if has_flavor_suffix:
+            commit_msg = f"chore: release {version}"
+        else:
+            commit_msg = f"chore: release {version}-{flavor}"
+
         subprocess.run(
-            ["git", "commit", "-m", f"chore: release {version}-{flavor}"],
+            ["git", "commit", "-m", commit_msg],
             check=True,
         )
-        console.print(f"[green]✓[/green] Committed: chore: release {version}-{flavor}")
+        console.print(f"[green]✓[/green] Committed: {commit_msg}")
         return True
     except subprocess.CalledProcessError as e:
         raise DistributionError(f"Git commit failed: {e}") from e
@@ -134,7 +141,8 @@ def git_tag(version: str, flavor: str) -> bool:
     Raises:
         DistributionError: If tagging fails
     """
-    tag = f"v{version}-{flavor}"
+    has_flavor_suffix = "-" in version.split("+")[0]
+    tag = f"v{version}" if has_flavor_suffix else f"v{version}-{flavor}"
     try:
         subprocess.run(["git", "tag", tag], check=True)
         console.print(f"[green]✓[/green] Tagged: {tag}")
