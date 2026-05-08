@@ -16,6 +16,81 @@ fship release qa --bump patch       # Auto-increment patch
 4. **Validate**: `fship validate`
 5. **Release**: `fship release qa` (or your flavor name)
 
+## Why fship?
+
+**Problem:** Manual Flutter releases to Firebase App Distribution are tedious and error-prone.
+- Manual version bumping in pubspec.yaml
+- Manual changelog creation
+- Manual git tagging
+- Manual APK building for each flavor
+- Manual Firebase distribution
+- Human error: wrong version, missing tags, incomplete changelogs
+
+**Solution:** fship automates the entire workflow in one command.
+
+## Features
+
+✓ **Interactive or Automated Version Bumping**
+- Interactive: choose version interactively
+- Auto-increment: patch, minor, or major
+- Exact version: specify exact version number
+
+✓ **Changelog Generation**
+- Auto-generate CHANGELOG.md from git history
+- Uses git-chglog for professional formatting
+- Customizable changelog templates
+
+✓ **Git Integration**
+- Auto-commit version changes
+- Auto-create git tags
+- Track release history in git
+
+✓ **Multi-Flavor Support**
+- Separate configurations per flavor (qa, uat, prod)
+- Flavor-specific entrypoints, APK paths, Firebase app IDs
+- Release to multiple flavors independently
+
+✓ **APK Building**
+- Automated Flutter APK build per flavor
+- Configurable build output paths
+- Build validation before distribution
+
+✓ **Firebase Distribution**
+- One-command distribution to Firebase App Distribution
+- Customizable tester groups (testers, internal, external)
+- Release notes auto-generated from git log
+- Share links in output for easy distribution
+
+✓ **Dry-Run Mode**
+- Test version bumping, changelog, and tagging without building/distributing
+- Perfect for validating setup
+
+✓ **Environment Management**
+- Auto-loads Firebase app IDs from `.env.dev`
+- Interactive setup if config missing
+- No hardcoded secrets in repo
+
+## How It Works (Full Flow)
+
+1. **Bump version** in `pubspec.yaml` (interactive or auto)
+2. **Generate CHANGELOG.md** via `git-chglog`
+3. **Generate release_note.txt** from git log since last tag
+4. **Git commit** version changes
+5. **Git tag** the release
+6. **Build APK** for the flavor
+7. **Distribute to Firebase App Distribution**
+
+## Benefits
+
+| Manual Process | fship |
+|---|---|
+| 15-20 min per release | 2-3 min per release |
+| Multiple error-prone steps | Single command |
+| Manual version tracking | Git-backed versions |
+| Manual changelog maintenance | Auto-generated from commits |
+| Easy to forget steps | Enforced workflow |
+| Hard to track history | Full git history preserved |
+
 ## What It Does (Full Flow)
 
 1. **Bump version** in `pubspec.yaml` (interactive or auto)
