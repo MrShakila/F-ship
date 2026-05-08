@@ -19,21 +19,27 @@ ENV_FILE = Path.cwd() / ".env.dev"
 DEFAULT_CFG = {
     "flavors": {
         "qa": {
-            "firebase_app_id_env": "APPIDANDROID",
+            "firebase_app_id_env_android": "APPIDANDROID",
+            "firebase_app_id_env_ios": "APPIDIOS",
             "entrypoint": "lib/main_qa.dart",
             "apk_path": "build/app/outputs/flutter-apk/app-qa-release.apk",
+            "ipa_path": "build/ios/ipa/fship-qa-release.ipa",
             "groups": "testers",
         },
         "uat": {
-            "firebase_app_id_env": "APPIDANDROID",
+            "firebase_app_id_env_android": "APPIDANDROID",
+            "firebase_app_id_env_ios": "APPIDIOS",
             "entrypoint": "lib/main_uat.dart",
             "apk_path": "build/app/outputs/flutter-apk/app-uat-release.apk",
+            "ipa_path": "build/ios/ipa/fship-uat-release.ipa",
             "groups": "testers",
         },
         "prod": {
-            "firebase_app_id_env": "APPIDANDROID",
+            "firebase_app_id_env_android": "APPIDANDROID",
+            "firebase_app_id_env_ios": "APPIDIOS",
             "entrypoint": "lib/main_prod.dart",
             "apk_path": "build/app/outputs/flutter-apk/app-prod-release.apk",
+            "ipa_path": "build/ios/ipa/fship-prod-release.ipa",
             "groups": "testers",
         },
     }
@@ -74,12 +80,13 @@ def load_env_file() -> None:
 
 
 def _create_env_template() -> None:
-    """Create .env.dev template and prompt user to fill in Android app IDs."""
-    template = """# Firebase Android App ID
-# Same variable for all flavors (flavor determined by .env file)
-# Get this from Firebase Console > App settings
+    """Create .env.dev template and prompt user to fill in Firebase app IDs."""
+    template = """# Firebase App IDs for Android and iOS
+# Same variables for all flavors (flavor determined by .env file)
+# Get these from Firebase Console > App settings
 
 APPIDANDROID=
+APPIDIOS=
 """
     ENV_FILE.write_text(template)
     console.print(f"[yellow]⚠  Created template: {ENV_FILE}[/yellow]")
@@ -99,9 +106,11 @@ APPIDANDROID=
 
 @dataclass
 class FlavorConfig:
-    firebase_app_id_env: str
+    firebase_app_id_env_android: str
+    firebase_app_id_env_ios: str
     entrypoint: str
     apk_path: str
+    ipa_path: str
     groups: str
 
 
@@ -128,9 +137,15 @@ def load_config() -> Config:
     for flavor_name, flavor_data in cfg.get("flavors", {}).items():
         try:
             flavors[flavor_name] = FlavorConfig(
-                firebase_app_id_env=flavor_data["firebase_app_id_env"],
+                firebase_app_id_env_android=flavor_data.get(
+                    "firebase_app_id_env_android", "APPIDANDROID"
+                ),
+                firebase_app_id_env_ios=flavor_data.get(
+                    "firebase_app_id_env_ios", "APPIDIOS"
+                ),
                 entrypoint=flavor_data["entrypoint"],
                 apk_path=flavor_data["apk_path"],
+                ipa_path=flavor_data.get("ipa_path", ""),
                 groups=flavor_data.get("groups", "testers"),
             )
         except KeyError as e:

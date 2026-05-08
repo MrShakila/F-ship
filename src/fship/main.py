@@ -117,9 +117,9 @@ def init(interactive: bool = typer.Option(True, "--interactive/--no-interactive"
                 default=f"build/app/outputs/flutter-apk/app-{flavor}-release.apk"
             )
 
-            app_id_env = Prompt.ask(
-                "  Environment variable name for Firebase app ID",
-                default="APPIDANDROID"
+            ipa_path = Prompt.ask(
+                "  IPA output path (iOS)",
+                default=f"build/ios/ipa/fship-{flavor}-release.ipa"
             )
 
             groups = Prompt.ask(
@@ -128,9 +128,11 @@ def init(interactive: bool = typer.Option(True, "--interactive/--no-interactive"
             )
 
             config["flavors"][flavor] = {
-                "firebase_app_id_env": app_id_env,
+                "firebase_app_id_env_android": "APPIDANDROID",
+                "firebase_app_id_env_ios": "APPIDIOS",
                 "entrypoint": entrypoint,
                 "apk_path": apk_path,
+                "ipa_path": ipa_path,
                 "groups": groups,
             }
 
@@ -168,17 +170,20 @@ def _print_env_setup(config: dict) -> None:
     console.print("[yellow]Option 1: Use .env.dev (single file for dev)[/yellow]\n")
     console.print("Create [bold].env.dev[/bold]:")
     console.print(f"  [cyan]APPIDANDROID[/cyan]=1:123456789:android:abcdef...")
+    console.print(f"  [cyan]APPIDIOS[/cyan]=1:987654321:ios:fedcba...")
     console.print()
 
     console.print("[yellow]Option 2: Use flavor-specific files (recommended for CI/CD)[/yellow]\n")
     console.print("Flavor determined by filename (.env.{flavor}):\n")
     for flavor in config.get("flavors", {}).keys():
         console.print(f"Create [bold].env.{flavor}[/bold]:")
-        console.print(f"  [cyan]APPIDANDROID[/cyan]=1:123456789:android:abcdef...\n")
+        console.print(f"  [cyan]APPIDANDROID[/cyan]=1:123456789:android:abcdef...")
+        console.print(f"  [cyan]APPIDIOS[/cyan]=1:987654321:ios:fedcba...\n")
 
-    console.print("[yellow]Option 3: Export as environment variable[/yellow]\n")
+    console.print("[yellow]Option 3: Export as environment variables[/yellow]\n")
     console.print("In your shell:")
     console.print(f"  [dim]export APPIDANDROID='1:123456789:android:abcdef...'[/dim]")
+    console.print(f"  [dim]export APPIDIOS='1:987654321:ios:fedcba...'[/dim]")
     console.print()
 
     console.print("[green]✓[/green] Run [cyan]fship validate[/cyan] after setup to verify")
@@ -194,13 +199,19 @@ def validate():
         console.print("[bold]Configured Flavors:[/bold]")
         for flavor, cfg in config.flavors.items():
             console.print(f"  [cyan]{flavor}:[/cyan] {cfg.entrypoint}")
-            app_id = os.getenv(cfg.firebase_app_id_env)
-            if app_id:
-                console.print(f"    [green]✓[/green] {cfg.firebase_app_id_env} set")
+
+            android_id = os.getenv(cfg.firebase_app_id_env_android)
+            ios_id = os.getenv(cfg.firebase_app_id_env_ios)
+
+            if android_id:
+                console.print(f"    [green]✓[/green] {cfg.firebase_app_id_env_android} (Android)")
             else:
-                console.print(
-                    f"    [yellow]⚠[/yellow] {cfg.firebase_app_id_env} not set"
-                )
+                console.print(f"    [yellow]⚠[/yellow] {cfg.firebase_app_id_env_android} not set")
+
+            if ios_id:
+                console.print(f"    [green]✓[/green] {cfg.firebase_app_id_env_ios} (iOS)")
+            else:
+                console.print(f"    [yellow]⚠[/yellow] {cfg.firebase_app_id_env_ios} not set")
 
     except Exception as e:
         console.print(f"[red]✗ Config validation failed: {e}[/red]")

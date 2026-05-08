@@ -108,7 +108,7 @@ def distribute_step(flavor_config: FlavorConfig) -> bool:
     """Distribute APK to Firebase."""
     return distribute_to_firebase(
         flavor_config.apk_path,
-        flavor_config.firebase_app_id_env,
+        flavor_config.firebase_app_id_env_android,
         flavor_config.groups,
     )
 

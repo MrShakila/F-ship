@@ -13,7 +13,7 @@ console = Console()
 
 def distribute_to_firebase(
     apk_path: str,
-    firebase_app_id_env: str,
+    firebase_app_id_env_android: str,
     groups: str = "testers",
     release_notes_file: str = "release_note.txt",
 ) -> bool:
@@ -21,19 +21,19 @@ def distribute_to_firebase(
 
     Args:
         apk_path: Path to APK file
-        firebase_app_id_env: Environment variable name for app ID
+        firebase_app_id_env_android: Environment variable name for Android app ID
         groups: Comma-separated groups to distribute to
         release_notes_file: Path to release notes file
 
     Raises:
         DistributionError: If distribution fails
     """
-    app_id = os.getenv(firebase_app_id_env)
+    app_id = os.getenv(firebase_app_id_env_android)
 
     if not app_id:
         raise DistributionError(
-            f"Environment variable {firebase_app_id_env} not set. "
-            f"Add to .env.dev: {firebase_app_id_env}=<your-app-id>"
+            f"Environment variable {firebase_app_id_env_android} not set. "
+            f"Add to .env.dev: {firebase_app_id_env_android}=<your-app-id>"
         )
 
     try:
