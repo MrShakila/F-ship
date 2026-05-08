@@ -1,5 +1,7 @@
 """Version management with validation."""
 
+import re
+import subprocess
 from pathlib import Path
 from ruamel.yaml import YAML
 from rich.console import Console
@@ -9,6 +11,22 @@ from fship.errors import VersionError
 from fship.validation import validate_version_format, validate_bump_part
 
 console = Console()
+
+
+def get_max_build_from_tags() -> int:
+    """Return highest build number (+N) found across all v* git tags."""
+    try:
+        result = subprocess.run(["git", "tag", "-l", "v*"], capture_output=True, text=True)
+        if result.returncode != 0:
+            return 0
+        max_build = 0
+        for tag in result.stdout.strip().splitlines():
+            m = re.search(r'\+(\d+)$', tag)
+            if m:
+                max_build = max(max_build, int(m.group(1)))
+        return max_build
+    except Exception:
+        return 0
 
 
 def read_version(pubspec_path: Path = None) -> str:
@@ -85,7 +103,7 @@ def format_version(major: int, minor: int, patch: int, build: int) -> str:
     return f"{major}.{minor}.{patch}+{build}"
 
 
-def bump_flavor_version(current: str, flavor: str = "qa", known_flavors: set = None) -> str:
+def bump_flavor_version(current: str, flavor: str = "qa", known_flavors: set = None, min_build: int = 0) -> str:
     """Bump non-prod flavor version: increment suffix number and build.
 
     Rules:
@@ -97,6 +115,8 @@ def bump_flavor_version(current: str, flavor: str = "qa", known_flavors: set = N
     known_flavors: set of configured flavor names used to distinguish flavor vs custom suffixes.
     If None or suffix not in known_flavors, treated as custom (preserved).
 
+    min_build: floor for the new build number (from git tags). New build = max(build+1, min_build+1).
+
     Raises:
         VersionError: If parsing fails
     """
@@ -106,9 +126,10 @@ def bump_flavor_version(current: str, flavor: str = "qa", known_flavors: set = N
         parts = current.split("+")
         semantic_part = parts[0]
         build = int(parts[1])
+        new_build = max(build + 1, min_build + 1)
 
         if "-" not in semantic_part:
-            return f"{semantic_part}-{flavor}-1+{build + 1}"
+            return f"{semantic_part}-{flavor}-1+{new_build}"
 
         # Split into base semver and suffix (e.g. "3.0.4-qa-1" → "3.0.4", "qa-1")
         base_semver, suffix_full = semantic_part.split("-", 1)
@@ -130,13 +151,13 @@ def bump_flavor_version(current: str, flavor: str = "qa", known_flavors: set = N
 
         if suffix_name == flavor:
             # Same flavor: increment counter
-            return f"{base_semver}-{flavor}-{suffix_num + 1}+{build + 1}"
+            return f"{base_semver}-{flavor}-{suffix_num + 1}+{new_build}"
         elif is_flavor_suffix:
             # Different flavor suffix: replace with current flavor, reset counter
-            return f"{base_semver}-{flavor}-1+{build + 1}"
+            return f"{base_semver}-{flavor}-1+{new_build}"
         else:
             # Custom suffix: preserve it, just increment counter
-            return f"{base_semver}-{suffix_name}-{suffix_num + 1}+{build + 1}"
+            return f"{base_semver}-{suffix_name}-{suffix_num + 1}+{new_build}"
 
     except VersionError:
         raise
@@ -195,7 +216,8 @@ def resolve_version(current: str, version: str = None, bump: str = None, flavor:
         if flavor == "prod":
             new_version = bump_version(current, bump)
         else:
-            new_version = bump_flavor_version(current, flavor, known_flavors)
+            max_build = get_max_build_from_tags()
+            new_version = bump_flavor_version(current, flavor, known_flavors, min_build=max_build)
         console.print(f"[cyan]{current}[/cyan] → [green]{new_version}[/green]")
         return new_version
 
@@ -205,7 +227,8 @@ def resolve_version(current: str, version: str = None, bump: str = None, flavor:
     if flavor == "prod":
         suggested = bump_version(current, "patch")
     else:
-        suggested = bump_flavor_version(current, flavor, known_flavors)
+        max_build = get_max_build_from_tags()
+        suggested = bump_flavor_version(current, flavor, known_flavors, min_build=max_build)
 
     console.print(f"  [green]1) bump:[/green] {suggested}")
     choice = Prompt.ask("Select 1 or enter version")
