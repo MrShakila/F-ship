@@ -112,10 +112,14 @@ def run_release(
         current_version = read_version()
         new_version = resolve_version(current_version, version, bump, flavor)
 
+        # shared state: build step writes ipa_built, distribute step reads it
+        build_state = {"ipa_built": False}
+
         def build_step():
             if parallel_builds:
                 console.print("[dim]Building APK + IPA in parallel...[/dim]")
-                apk_ok, _ = _build_parallel(flavor, flavor_config)
+                apk_ok, ipa_ok = _build_parallel(flavor, flavor_config)
+                build_state["ipa_built"] = ipa_ok
                 return apk_ok
             else:
                 success, apk_path = build_apk(flavor, flavor_config.entrypoint)
@@ -123,13 +127,28 @@ def run_release(
                     console.print(f"[green]✓[/green] APK ready: {apk_path or 'built'}")
                 return success
 
+        def distribute_both_step():
+            # Always distribute APK
+            apk_ok = distribute_step(flavor_config)
+            # Distribute IPA only if it was built in parallel
+            if build_state["ipa_built"] and flavor_config.ipa_path and flavor_config.firebase_app_id_env_ios:
+                console.print("\n[bold blue]→[/bold blue] Distribute IPA to Firebase")
+                ios_ok = distribute_to_firebase(
+                    flavor_config.ipa_path,
+                    flavor_config.firebase_app_id_env_ios,
+                    flavor_config.groups,
+                )
+                if not ios_ok:
+                    console.print("[yellow]⚠[/yellow] iOS distribution failed (Android succeeded)")
+            return apk_ok
+
         all_steps = [
             ("Update pubspec.yaml", "version", lambda: update_pubspec(new_version)),
             ("Generate CHANGELOG.md", "changelog", lambda: generate_changelog()),
             ("Generate release notes", "notes", lambda: generate_release_notes(flavor)),
             ("Commit & tag", "tag", lambda: commit_and_tag(new_version, flavor)),
             ("Build", "build", build_step),
-            ("Distribute to Firebase", "distribute", lambda: distribute_step(flavor_config)),
+            ("Distribute to Firebase", "distribute", distribute_both_step),
         ]
 
         if resume_from:
