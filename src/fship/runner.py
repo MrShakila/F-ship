@@ -13,7 +13,7 @@ from fship.operations import (
     build_apk,
     distribute_to_firebase,
 )
-from fship.errors import FshipError, DistributionError
+from fship.errors import FshipError
 
 console = Console()
 

@@ -69,7 +69,7 @@ def release(
             validate_bump_part(bump)
         if version and bump:
             raise ValidationError("Cannot specify both --version and --bump")
-        if resume_from and resume_from not in ["version", "changelog", "tag", "build", "distribute"]:
+        if resume_from and resume_from not in ["version", "changelog", "notes", "tag", "build", "distribute"]:
             raise ValidationError(f"Invalid resume step: {resume_from}")
     except FshipError as e:
         console.print(f"[red]Error: {e}[/red]")
