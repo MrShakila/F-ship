@@ -23,6 +23,7 @@ def run_release(
     bump: str = None,
     skip_build: bool = False,
     skip_distribute: bool = False,
+    no_push: bool = False,
 ) -> bool:
     """Orchestrate full release flow."""
 
@@ -66,7 +67,7 @@ def run_release(
         console.print(
             f"\n[bold green]✓ Release {new_version} to {flavor} complete![/bold green]"
         )
-        show_summary(new_version, flavor)
+        show_summary(new_version, flavor, no_push=no_push)
         return True
 
     except FshipError as e:
@@ -113,7 +114,7 @@ def distribute_step(flavor_config: FlavorConfig) -> bool:
     )
 
 
-def show_summary(version: str, flavor: str) -> None:
+def show_summary(version: str, flavor: str, no_push: bool = False) -> None:
     """Display summary table of what was done."""
     table = Table(title=f"Release Summary: {version} → {flavor}")
     table.add_column("Component", style="cyan")
@@ -128,3 +129,7 @@ def show_summary(version: str, flavor: str) -> None:
     table.add_row("Distribution", f"Firebase App Distribution")
 
     console.print(table)
+
+    if no_push:
+        console.print("\n[yellow]⚠ Changes committed and tagged locally.[/yellow]")
+        console.print("[dim]Push manually: git push origin main && git push origin v{version}-{flavor}[/dim]")

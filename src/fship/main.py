@@ -43,6 +43,9 @@ def release(
         "--skip-distribute",
         help="Skip Firebase distribution (for dry-run)",
     ),
+    no_push: bool = typer.Option(
+        False, "--no-push", help="Commit and tag but do not push to remote"
+    ),
 ):
     """Release a flavor to Firebase App Distribution.
 
@@ -71,6 +74,7 @@ def release(
         bump=bump,
         skip_build=skip_build,
         skip_distribute=skip_distribute,
+        no_push=no_push,
     )
 
     raise typer.Exit(0 if success else 1)
