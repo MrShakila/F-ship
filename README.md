@@ -312,36 +312,50 @@ fship release qa
 
 ## All Commands and Options
 
-### Main Commands
+### Commands
 
-```bash
-fship release <flavor> [OPTIONS]   # Release to Firebase App Distribution
-fship init                         # Interactive setup with Firebase guide
-fship validate                     # Check tools, config, and environment
-fship version                      # Show fship version
-fship --help                       # Show all commands and options
-```
+| Command | Description |
+|---|---|
+| `fship release <flavor>` | Full release: version bump → changelog → tag → build → distribute |
+| `fship multi-release <flavors>` | Release multiple flavors in sequence (e.g., `qa,uat`) |
+| `fship status [flavor]` | Show current version, last release tag, and pending commit count |
+| `fship pre-check <flavor>` | Pre-flight checks: Flutter SDK, Firebase CLI, credentials, APK path |
+| `fship init` | Interactive setup guide — configure flavors and Firebase app IDs |
+| `fship validate` | Check tools (flutter, firebase, git), config schema, and env vars |
+| `fship help` | Full help with all commands, options, and examples |
+| `fship version` | Show installed fship version |
 
 ### Release Options
 
-```bash
-FLAVOR                         # Required: qa, uat, prod, or custom flavor
+| Option | Description |
+|---|---|
+| `<flavor>` | Required. Flavor to release: `qa`, `uat`, `prod`, or custom |
+| `--version, -v VERSION` | Exact version (e.g., `3.0.4+79`). Skips interactive prompt |
+| `--bump, -b PART` | Auto-increment: `patch`, `minor`, or `major`. Resets build to 0 |
+| `--skip-build` | Skip Flutter build step (useful for testing config) |
+| `--skip-distribute` | Skip Firebase distribution (dry-run mode) |
+| `--no-push` | Commit and tag locally — don't push to remote |
+| `--resume-from STEP` | Retry from a specific step after failure (see steps below) |
 
---version, -v VERSION         # Exact version (e.g., 3.0.4+79)
---bump, -b PART               # Auto-bump version: patch, minor, or major
---skip-build                  # Skip Flutter build step
---skip-distribute             # Skip Firebase distribution step
---no-push                     # Commit and tag locally, don't push to remote
---resume-from STEP            # Resume from failed step (skip earlier steps)
-```
+**Resume steps** (in order): `version` → `changelog` → `notes` → `tag` → `build` → `distribute`
 
-### Other Commands
+### Multi-Release Options
 
-```bash
-fship status [flavor]                      # Current version, last release, pending commits
-fship pre-check <flavor>                   # Pre-release checks (Flutter, Firebase, credentials)
-fship multi-release <flavors> [OPTIONS]    # Release multiple flavors in sequence
-```
+| Option | Description |
+|---|---|
+| `<flavors>` | Required. Comma-separated flavor list (e.g., `qa,uat,prod`) |
+| `--bump, -b PART` | Auto-bump all flavors: `patch`, `minor`, or `major` |
+| `--skip-build` | Skip build for all flavors |
+| `--skip-distribute` | Skip distribution for all flavors |
+| `--no-push` | Local only for all flavors |
+
+### Environment Variables
+
+| Variable | Description |
+|---|---|
+| `APPIDANDROID` | Firebase Android App ID (in `.env.{flavor}`) |
+| `APPIDIOS` | Firebase iOS App ID (in `.env.{flavor}`) |
+| `FSHIP_PARALLEL_BUILDS=1` | Build APK and IPA simultaneously using threads |
 
 ### Release Examples
 
