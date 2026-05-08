@@ -146,7 +146,7 @@ def find_built_aab(flavor: str) -> Path | None:
     return None
 
 
-def build_ipa(flavor: str, entrypoint: str, export_method: str = "ad-hoc") -> tuple[bool, str]:
+def build_ipa(flavor: str, entrypoint: str, export_method: str = None) -> tuple[bool, str]:
     """Build Flutter IPA for iOS.
 
     Args:
@@ -168,9 +168,10 @@ def build_ipa(flavor: str, entrypoint: str, export_method: str = "ad-hoc") -> tu
         flavor,
         "-t",
         entrypoint,
-        "--export-method",
-        export_method,
     ]
+
+    if export_method:
+        cmd.extend(["--export-method", export_method])
 
     try:
         console.print(f"[dim]$ {' '.join(cmd)}[/dim]")
