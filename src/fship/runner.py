@@ -193,6 +193,8 @@ def run_multi_release(
     for flavor in flavors:
         try:
             from fship.core import get_flavor
+            from fship.core.config import load_env_file
+            load_env_file(flavor)  # load flavor-specific env before each release
             flavor_config = get_flavor(config, flavor)
         except FshipError as e:
             console.print(f"[red]✗ Skipping {flavor}: {e}[/red]")

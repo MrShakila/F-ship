@@ -215,7 +215,7 @@ def multi_release(
         raise typer.Exit(1)
 
     try:
-        config = load_config()
+        config = load_config()  # load config only (env loaded per-flavor in run_multi_release)
         if bump:
             validate_bump_part(bump)
     except FshipError as e:
