@@ -3,9 +3,13 @@
 Memorable, easy CLI for orchestrating Flutter release workflows to Firebase App Distribution.
 
 ```bash
-fship release qa                    # Interactive version bump + full release
-fship release qa --version 1.2.4+46  # Exact version
-fship release qa --bump patch       # Auto-increment patch
+fship release qa                         # Interactive version bump + full release
+fship release qa --version 3.0.4+79      # Exact version
+fship release qa --bump patch            # Auto-increment patch
+fship release qa --resume-from distribute  # Retry after failure
+fship multi-release qa,uat --bump patch  # Release multiple flavors
+fship status qa                          # Current version + last release info
+fship pre-check qa                       # Pre-flight checks before release
 ```
 
 ## Quick Start
@@ -14,7 +18,8 @@ fship release qa --bump patch       # Auto-increment patch
 2. **Initialize**: `cd /path/to/flutter/project && fship init`
 3. **Add Firebase App IDs**: Follow the interactive setup guide
 4. **Validate**: `fship validate`
-5. **Release**: `fship release qa` (or your flavor name)
+5. **Pre-check**: `fship pre-check qa`
+6. **Release**: `fship release qa` (or your flavor name)
 
 ## Why fship?
 
@@ -26,7 +31,7 @@ fship release qa --bump patch       # Auto-increment patch
 - Manual Firebase distribution
 - Human error: wrong version, missing tags, incomplete changelogs
 
-**Solution:** fship automates the entire workflow in one command.
+**Solution:** fship automates the entire workflow in one command, with safety features like auto-rollback and pre-release checks.
 
 ## Features
 
@@ -36,21 +41,23 @@ fship release qa --bump patch       # Auto-increment patch
 - Multiple environment variable setup options
 
 ✓ **Android & iOS Support**
-- Build and distribute both APK (Android) and IPA (iOS)
+- Build and distribute APK (Android), IPA (iOS), and AAB (Play Store)
 - Separate Firebase app IDs: APPIDANDROID, APPIDIOS
 - Flavor-specific build paths for both platforms
-- Single-command release for both platforms
+- Optional parallel APK + IPA builds (`FSHIP_PARALLEL_BUILDS=1`)
 
 ✓ **Version Management**
 - Interactive or automated version bumping
 - Auto-increment: patch, minor, or major
 - Exact version specification
+- Prod: pure semantic versioning (X.Y.Z+0, no suffix)
+- Non-prod: flavor suffix (e.g., 3.0.4-qa-2+79)
 - Format validation (X.Y.Z+B or X.Y.Z-suffix+B)
 
 ✓ **Changelog Generation**
 - Auto-generate CHANGELOG.md from git history
 - Uses git-chglog for professional formatting
-- Customizable changelog templates
+- Release notes auto-generated from git log since last tag
 
 ✓ **Git Integration**
 - Auto-commit version changes
@@ -60,7 +67,20 @@ fship release qa --bump patch       # Auto-increment patch
 ✓ **Multi-Flavor Support**
 - Separate configurations per flavor (qa, uat, prod, custom)
 - Flavor-specific entrypoints, build paths, Firebase app IDs
-- Release to multiple flavors independently
+- `fship multi-release qa,uat` releases multiple flavors in sequence
+
+✓ **Auto-Rollback on Failure**
+- If distribution fails after commit/tag, automatically reverts
+- Restores original version in pubspec.yaml
+- Deletes the git tag and resets the commit
+- Resume cleanly with `--resume-from distribute`
+
+✓ **Pre-Release Checks**
+- `fship pre-check <flavor>` validates everything before release
+- Checks Flutter SDK, Firebase CLI, credentials, APK path
+
+✓ **Release Status**
+- `fship status [flavor]` shows current version, last release, pending commits
 
 ✓ **Real-Time Progress Output**
 - Stream Flutter build output to console
@@ -70,8 +90,7 @@ fship release qa --bump patch       # Auto-increment patch
 ✓ **Firebase Distribution**
 - One-command distribution to Firebase App Distribution
 - Customizable tester groups (testers, internal, external)
-- Release notes auto-generated from git log
-- Support for both Android and iOS platforms
+- Flavor-specific env files: `.env.qa`, `.env.uat`, `.env.prod`
 
 ✓ **Input Validation**
 - Version format validation (X.Y.Z+B)
@@ -83,6 +102,10 @@ fship release qa --bump patch       # Auto-increment patch
 ✓ **Dry-Run Mode**
 - Test version bumping, changelog, and tagging without building/distributing
 - Perfect for validating setup
+
+✓ **Resume From Failed Step**
+- `--resume-from STEP` retries from failure point
+- Skips already-completed steps
 
 ✓ **Environment Management**
 - Auto-loads Firebase app IDs from `.env.{flavor}` or `.env.dev`
