@@ -12,7 +12,7 @@ fship release qa --bump patch       # Auto-increment patch
 
 1. **Install**: `pip install fship`
 2. **Initialize**: `cd /path/to/flutter/project && fship init`
-3. **Configure**: Edit `fship.yaml` with your Firebase app IDs
+3. **Add Firebase App IDs**: Follow the interactive setup guide
 4. **Validate**: `fship validate`
 5. **Release**: `fship release qa` (or your flavor name)
 
@@ -22,7 +22,7 @@ fship release qa --bump patch       # Auto-increment patch
 - Manual version bumping in pubspec.yaml
 - Manual changelog creation
 - Manual git tagging
-- Manual APK building for each flavor
+- Manual APK/IPA building for each flavor
 - Manual Firebase distribution
 - Human error: wrong version, missing tags, incomplete changelogs
 
@@ -30,10 +30,22 @@ fship release qa --bump patch       # Auto-increment patch
 
 ## Features
 
-✓ **Interactive or Automated Version Bumping**
-- Interactive: choose version interactively
+✓ **Interactive Setup Guide**
+- Interactive `fship init` walks through Firebase App ID retrieval
+- Links to Firebase Console
+- Multiple environment variable setup options
+
+✓ **Android & iOS Support**
+- Build and distribute both APK (Android) and IPA (iOS)
+- Separate Firebase app IDs: APPIDANDROID, APPIDIOS
+- Flavor-specific build paths for both platforms
+- Single-command release for both platforms
+
+✓ **Version Management**
+- Interactive or automated version bumping
 - Auto-increment: patch, minor, or major
-- Exact version: specify exact version number
+- Exact version specification
+- Format validation (X.Y.Z+B)
 
 ✓ **Changelog Generation**
 - Auto-generate CHANGELOG.md from git history
@@ -46,29 +58,37 @@ fship release qa --bump patch       # Auto-increment patch
 - Track release history in git
 
 ✓ **Multi-Flavor Support**
-- Separate configurations per flavor (qa, uat, prod)
-- Flavor-specific entrypoints, APK paths, Firebase app IDs
+- Separate configurations per flavor (qa, uat, prod, custom)
+- Flavor-specific entrypoints, build paths, Firebase app IDs
 - Release to multiple flavors independently
 
-✓ **APK Building**
-- Automated Flutter APK build per flavor
-- Configurable build output paths
-- Build validation before distribution
+✓ **Real-Time Progress Output**
+- Stream Flutter build output to console
+- Stream Firebase CLI output to console
+- Live progress visibility (no silent waiting)
 
 ✓ **Firebase Distribution**
 - One-command distribution to Firebase App Distribution
 - Customizable tester groups (testers, internal, external)
 - Release notes auto-generated from git log
-- Share links in output for easy distribution
+- Support for both Android and iOS platforms
+
+✓ **Input Validation**
+- Version format validation (X.Y.Z+B)
+- Flavor existence checking
+- Path traversal protection
+- Firebase app ID format validation
+- Required environment variable validation
 
 ✓ **Dry-Run Mode**
 - Test version bumping, changelog, and tagging without building/distributing
 - Perfect for validating setup
 
 ✓ **Environment Management**
-- Auto-loads Firebase app IDs from `.env.dev`
+- Auto-loads Firebase app IDs from `.env.{flavor}` or `.env.dev`
 - Interactive setup if config missing
 - No hardcoded secrets in repo
+- Support for both Android and iOS app IDs
 
 ## How It Works (Full Flow)
 
@@ -77,29 +97,8 @@ fship release qa --bump patch       # Auto-increment patch
 3. **Generate release_note.txt** from git log since last tag
 4. **Git commit** version changes
 5. **Git tag** the release
-6. **Build APK** for the flavor
-7. **Distribute to Firebase App Distribution**
-
-## Benefits
-
-| Manual Process | fship |
-|---|---|
-| 15-20 min per release | 2-3 min per release |
-| Multiple error-prone steps | Single command |
-| Manual version tracking | Git-backed versions |
-| Manual changelog maintenance | Auto-generated from commits |
-| Easy to forget steps | Enforced workflow |
-| Hard to track history | Full git history preserved |
-
-## What It Does (Full Flow)
-
-1. **Bump version** in `pubspec.yaml` (interactive or auto)
-2. **Generate CHANGELOG.md** via `git-chglog`
-3. **Generate release_note.txt** from git log since last tag
-4. **Git commit** version changes
-5. **Git tag** the release
-6. **Build APK** for the flavor
-7. **Distribute to Firebase App Distribution**
+6. **Build APK/IPA** for the flavor (with real-time progress)
+7. **Distribute to Firebase App Distribution** (with real-time progress)
 
 ## Installation
 
@@ -120,31 +119,38 @@ pip install -e .
 ```bash
 cd /path/to/your/flutter/project
 
-# Copy default config
+# Interactive setup with Firebase App ID guide
 fship init
-
-# Edit fship.yaml — set your Firebase app IDs, entry points, APK paths
-vi fship.yaml
 
 # Validate setup
 fship validate
 ```
 
-### fship.yaml Example
+### Interactive Init Guide
 
-```yaml
-flavors:
-  qa:
-    firebase_app_id_env: APPIDANDROID_QA
-    entrypoint: lib/main_qa.dart
-    apk_path: build/app/outputs/flutter-apk/app-qa-release.apk
-    groups: testers
+`fship init` will walk you through:
 
-  prod:
-    firebase_app_id_env: APPIDANDROID_PROD
-    entrypoint: lib/main_prod.dart
-    apk_path: build/app/outputs/flutter-apk/app-prod-release.apk
-    groups: testers
+1. **Configure Flavors** — Choose which flavors (qa, uat, prod, custom)
+2. **Get Firebase App IDs** — Interactive guide with Firebase Console links
+3. **Set Environment Variables** — Choose between .env files or exports
+
+### Configuration File Structure
+
+After running `fship init`, your config is stored in `.config/fship.json`:
+
+```json
+{
+  "flavors": {
+    "qa": {
+      "firebase_app_id_env_android": "APPIDANDROID",
+      "firebase_app_id_env_ios": "APPIDIOS",
+      "entrypoint": "lib/main_qa.dart",
+      "apk_path": "build/app/outputs/flutter-apk/app-qa-release.apk",
+      "ipa_path": "build/ios/ipa/fship-qa-release.ipa",
+      "groups": "testers"
+    }
+  }
+}
 ```
 
 ## Usage
@@ -179,6 +185,63 @@ fship release qa --skip-build --skip-distribute
 # Only bumps version, generates changelog, commits, tags
 ```
 
+## Environment Setup
+
+### Option 1: Single .env.dev file (for development)
+
+Create `.env.dev` with both Android and iOS app IDs:
+
+```bash
+# .env.dev (add to .gitignore)
+APPIDANDROID=1:123456:android:abcdef...
+APPIDIOS=1:987654:ios:fedcba...
+```
+
+### Option 2: Flavor-Specific Files (Recommended for CI/CD)
+
+Flavor determined by filename:
+
+```bash
+# .env.qa
+APPIDANDROID=1:111111:android:aaaaaa...
+APPIDIOS=1:222222:ios:bbbbbb...
+
+# .env.uat
+APPIDANDROID=1:333333:android:cccccc...
+APPIDIOS=1:444444:ios:dddddd...
+
+# .env.prod
+APPIDANDROID=1:555555:android:eeeeee...
+APPIDIOS=1:666666:ios:ffffff...
+```
+
+### Option 3: Export as Environment Variables
+
+```bash
+export APPIDANDROID='1:123456:android:abcdef...'
+export APPIDIOS='1:987654:ios:fedcba...'
+fship release qa
+```
+
+### Getting Firebase App IDs
+
+1. Go to [Firebase Console](https://console.firebase.google.com)
+2. Select your project
+3. Click **Project Settings** (gear icon)
+4. Select **Your apps** tab
+5. Find your app and click it
+6. Copy the **Google App ID** (format: `1:123456789:android:abcdef...` or `1:123456789:ios:ghijkl...`)
+
+## Commands
+
+```bash
+fship release <flavor> [--version X.Y.Z+B] [--bump patch|minor|major] [--skip-build] [--skip-distribute]
+fship init                         # Interactive setup with Firebase guide
+fship validate                     # Check tools and config
+fship version                      # Show fship version
+fship --help                       # Full help
+```
+
 ## Prerequisites
 
 - Python 3.11+
@@ -186,42 +249,12 @@ fship release qa --skip-build --skip-distribute
 - Firebase CLI: `npm install -g firebase-tools`
 - git-chglog: `brew install git-chglog` (macOS) or `npm install -g git-chglog`
 
-## Environment Setup
-
-**First run creates `.env.dev` template:**
-```bash
-fship release qa
-# Creates .env.dev with placeholders, prompts you to fill in Android app IDs
-```
-
-Edit `.env.dev` with your Firebase Android app IDs:
-```bash
-# .env.dev (add to .gitignore)
-APPIDANDROID_QA=1:123456:android:abcdef...
-APPIDANDROID_UAT=1:345678:android:ghijkl...
-APPIDANDROID_PROD=1:789012:android:mnopqr...
-```
-
-Get app IDs from Firebase Console > Project Settings > Your apps (Android).
-
-fship automatically loads from `.env.dev` when you run `fship release`.
-
-## Commands
-
-```bash
-fship release <flavor> [--version X.Y.Z+B] [--bump patch|minor|major] [--skip-build] [--skip-distribute]
-fship init                         # Copy default fship.yaml
-fship validate                     # Check tools and config
-fship version                      # Show fship version
-fship --help                       # Full help
-```
-
 ## Troubleshooting
 
-**"fship.yaml not found"**
+**"Firebase app ID not set"**
 ```bash
-fship init
-vi fship.yaml  # customize
+fship init           # Run setup again
+fship validate       # Check configuration
 ```
 
 **"Firebase CLI not found"**
@@ -238,8 +271,21 @@ npm install -g git-chglog
 ```
 
 **"Commits/tags not created, but version was bumped"**
-- Ensure you're in a git repo and have uncommitted changes allowed
-- Check `git status`
+- Ensure you're in a git repo
+- Check `git status` for uncommitted changes
+- Verify git is configured with name and email
+
+## Security
+
+fship has built-in protections:
+- ✓ Version format validation
+- ✓ Path traversal protection
+- ✓ Firebase app ID format validation
+- ✓ Flavor existence checking
+- ✓ No shell injection vulnerabilities
+- ✓ Environment variable validation
+
+See [SECURITY_AUDIT.md](SECURITY_AUDIT.md) for details.
 
 ## Development
 
@@ -249,3 +295,17 @@ cd F-ship
 pip install -e .
 fship --help
 ```
+
+### Running Tests
+
+```bash
+pytest tests/ -v
+```
+
+## License
+
+MIT — See [LICENSE](LICENSE)
+
+## Contributing
+
+Issues and PRs welcome. See [GitHub](https://github.com/MrShakila/F-ship)
