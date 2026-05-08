@@ -55,7 +55,7 @@ def write_version(new_version: str, pubspec_path: Path = None) -> None:
 
 
 def parse_version(version_str: str) -> tuple[int, int, int, int]:
-    """Parse 'X.Y.Z+B' into (major, minor, patch, build).
+    """Parse 'X.Y.Z+B' or 'X.Y.Z-suffix+B' into (major, minor, patch, build).
 
     Raises:
         VersionError: If format invalid
@@ -66,10 +66,14 @@ def parse_version(version_str: str) -> tuple[int, int, int, int]:
         parts = version_str.split("+")
         semantic = parts[0].split(".")
 
+        patch_str = semantic[2]
+        if "-" in patch_str:
+            patch_str = patch_str.split("-")[0]
+
         return (
             int(semantic[0]),
             int(semantic[1]),
-            int(semantic[2]),
+            int(patch_str),
             int(parts[1]),
         )
     except (ValueError, IndexError) as e:
