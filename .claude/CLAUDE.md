@@ -4,7 +4,7 @@
 
 fship is a Flutter release orchestration CLI for Firebase App Distribution. Automates version bumping, changelog generation, git tagging, and APK/IPA distribution in one command. Supports multiple flavors (qa, uat, prod, custom) with per-flavor Firebase app IDs.
 
-**Status**: Stable (v0.4.0). Recent improvements: iOS support, interactive setup, real-time progress, modular validation layer, security hardening.
+**Status**: Stable (v0.6.0). Recent improvements: prod semantic versioning, flavor-specific env loading, resume-from failed steps, iOS support, interactive setup, real-time progress, modular validation layer, security hardening.
 
 ## Architecture
 
@@ -46,6 +46,32 @@ Key points:
 Push a tag matching `v*` pattern → GitHub Actions auto-publishes to PyPI + GitHub.
 File: `.github/workflows/release.yml`
 
+## Recent Features (v0.6.0)
+
+### Flavor-Specific Version Bumping
+- **Prod flavor**: Pure semantic versioning (X.Y.Z+0, no suffix names)
+- **Non-prod (qa/uat/custom)**: Suffix-based bumping
+  - With custom suffix: `3.0.4-claim-2+79` → `3.0.4-claim-3+80` (bumps suffix)
+  - Without suffix: `3.0.4+77` → `3.0.4-qa-1+78` (adds flavor name as suffix)
+- Implementation: `resolve_version()` checks flavor and uses appropriate bump strategy
+
+### Flavor-Specific Environment Loading
+- Fixed bug where loading all `.env.*` files simultaneously caused later ones to overwrite earlier ones
+- Now `load_env_file(flavor)` loads ONLY `.env.{flavor}` when flavor specified
+- `validate` command loads all existing env files to check setup
+- Prevents wrong app IDs being used in distribution step
+
+### Resume From Failed Steps
+- Added `--resume-from STEP` flag to retry from failure point
+- Skips completed steps (version bump, tag, etc.)
+- Available steps: `version`, `changelog`, `notes`, `tag`, `build`, `distribute`
+- Useful when Firebase fails but version/tag already created
+
+### No-Push Mode
+- `--no-push` flag commits and tags locally without pushing to remote
+- User can manually verify before pushing: `git push origin main && git push origin v0.6.0`
+- Better for CI/CD that pushes separately
+
 ## Known Decisions
 
 ### Why Modular Validation?
@@ -84,10 +110,18 @@ Callers can catch specific errors (`if isinstance(e, BuildError)`). Improves err
 
 ### Update Version Format
 
-Version format is validated against regex `^\d+\.\d+\.\d+\+\d+$` in `validation/version.py`. Changing format requires:
+Version format is validated against regex `^\d+\.\d+\.\d+(-[a-z0-9\-]+)?\+\d+$` in `validation/version.py` (allows optional flavor suffix).
+
+Formats:
+- Prod: `X.Y.Z+B` (e.g., `3.0.5+0`)
+- Non-prod: `X.Y.Z+B` or `X.Y.Z-suffix+B` (e.g., `3.0.4+77` or `3.0.4-qa-2+79`)
+
+To change format:
 1. Update regex in `validate_version_format()`
-2. Update examples in README.md
-3. Update tests in `tests/test_validation.py`
+2. Update `parse_version()` to extract components
+3. Update `bump_version()` and `bump_flavor_version()`
+4. Update examples in README.md
+5. Update tests in `tests/test_validation.py`
 
 ### Debugging a Release
 
