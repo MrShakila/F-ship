@@ -85,6 +85,36 @@ def format_version(major: int, minor: int, patch: int, build: int) -> str:
     return f"{major}.{minor}.{patch}+{build}"
 
 
+def bump_flavor_version(current: str) -> str:
+    """Bump non-prod flavor version: increment suffix number and build.
+
+    For 3.0.4-qa-1+78 → 3.0.4-qa-2+79
+
+    Raises:
+        VersionError: If parsing fails
+    """
+    validate_version_format(current)
+
+    try:
+        parts = current.split("+")
+        semantic_part = parts[0]
+        build = int(parts[1])
+
+        if "-" not in semantic_part:
+            raise VersionError(f"Version {current!r} has no flavor suffix")
+
+        base, suffix = semantic_part.rsplit("-", 1)
+        try:
+            suffix_num = int(suffix)
+            new_suffix = str(suffix_num + 1)
+        except ValueError:
+            raise VersionError(f"Can't parse flavor suffix: {suffix!r}")
+
+        return f"{base}-{new_suffix}+{build + 1}"
+    except Exception as e:
+        raise VersionError(f"Failed to bump flavor version: {e}")
+
+
 def bump_version(current: str, part: str) -> str:
     """Bump version part: 'patch', 'minor', or 'major'. Resets build to 0.
 
@@ -112,8 +142,11 @@ def bump_version(current: str, part: str) -> str:
         raise VersionError(f"Failed to bump version: {e}")
 
 
-def resolve_version(current: str, version: str = None, bump: str = None) -> str:
+def resolve_version(current: str, version: str = None, bump: str = None, flavor: str = None) -> str:
     """Resolve new version from flags or interactive prompt.
+
+    For non-prod flavors (qa, uat, custom): bump suffix + build number
+    For prod: use semantic versioning (patch, minor, major)
 
     Raises:
         VersionError: If resolved version invalid
@@ -122,29 +155,40 @@ def resolve_version(current: str, version: str = None, bump: str = None) -> str:
         validate_version_format(version)
         return version
 
+    is_prod = flavor == "prod"
+
     if bump:
         validate_bump_part(bump)
-        new_version = bump_version(current, bump)
+        if is_prod:
+            new_version = bump_version(current, bump)
+        else:
+            new_version = bump_flavor_version(current)
         console.print(f"[cyan]{current}[/cyan] → [green]{new_version}[/green]")
         return new_version
 
     console.print(f"Current version: [cyan]{current}[/cyan]")
     console.print(f"[dim]Suggested bumps:[/dim]")
-    patch_version = bump_version(current, 'patch')
-    minor_version = bump_version(current, 'minor')
-    major_version = bump_version(current, 'major')
-    console.print(f"  [green]1) patch:[/green] {patch_version}")
-    console.print(f"  [green]2) minor:[/green] {minor_version}")
-    console.print(f"  [green]3) major:[/green] {major_version}")
 
-    choice = Prompt.ask("Select (1-3) or enter version")
-
-    if choice == "1":
-        return patch_version
-    elif choice == "2":
-        return minor_version
-    elif choice == "3":
-        return major_version
+    if is_prod:
+        patch_version = bump_version(current, 'patch')
+        minor_version = bump_version(current, 'minor')
+        major_version = bump_version(current, 'major')
+        console.print(f"  [green]1) patch:[/green] {patch_version}")
+        console.print(f"  [green]2) minor:[/green] {minor_version}")
+        console.print(f"  [green]3) major:[/green] {major_version}")
+        choice = Prompt.ask("Select (1-3) or enter version")
+        if choice == "1":
+            return patch_version
+        elif choice == "2":
+            return minor_version
+        elif choice == "3":
+            return major_version
     else:
-        validate_version_format(choice)
-        return choice
+        flavor_bumped = bump_flavor_version(current)
+        console.print(f"  [green]1) flavor bump:[/green] {flavor_bumped}")
+        choice = Prompt.ask("Select 1 or enter version")
+        if choice == "1":
+            return flavor_bumped
+
+    validate_version_format(choice)
+    return choice

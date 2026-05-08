@@ -31,7 +31,7 @@ def run_release(
 
     try:
         current_version = read_version()
-        new_version = resolve_version(current_version, version, bump)
+        new_version = resolve_version(current_version, version, bump, flavor)
 
         steps = [
             ("Update pubspec.yaml", lambda: update_pubspec(new_version)),
