@@ -183,15 +183,15 @@ def build_ipa(flavor: str, entrypoint: str, export_method: str = None) -> tuple[
             console.print("[red]✗ IPA build failed[/red]")
             return False, ""
 
-        console.print("[green]✓[/green] IPA built successfully")
-
         ipa_path = find_built_ipa(flavor)
         if ipa_path:
+            console.print("[green]✓[/green] IPA built successfully")
             console.print(f"[green]✓[/green] Found IPA: {ipa_path}")
             return True, str(ipa_path)
         else:
-            console.print("[yellow]Warning: Could not locate IPA. Check build output.[/yellow]")
-            return True, ""
+            console.print("[red]✗ IPA export failed — .ipa file not created[/red]")
+            console.print("[dim]Check: signing certificate, provisioning profile, Apple account in Xcode[/dim]")
+            return False, ""
 
     except FileNotFoundError as e:
         raise BuildError("Flutter not found. Install Flutter SDK or add to PATH.") from e
