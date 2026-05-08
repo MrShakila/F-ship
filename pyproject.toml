@@ -7,9 +7,19 @@ name = "fship"
 version = "0.1.1"
 description = "Flutter Ship — orchestrate release workflows to Firebase App Distribution"
 readme = "README.md"
-license = {text = "MIT"}
-authors = [{name = "Shakila", email = "shadikari012@gmail.com"}]
 requires-python = ">=3.11"
+authors = [{name = "Shakila", email = "shadikari012@gmail.com"}]
+license = {file = "LICENSE"}
+keywords = ["flutter", "release", "firebase", "cli"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Software Development :: Build Tools",
+]
 dependencies = [
     "typer[all]>=0.12",
     "rich>=13.7",
