@@ -1,3 +1,8 @@
 """Flutter Ship — release orchestration CLI."""
 
-__version__ = "0.5.3"
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("fship")
+except PackageNotFoundError:
+    __version__ = "unknown"
