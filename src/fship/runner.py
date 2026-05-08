@@ -24,8 +24,13 @@ def run_release(
     skip_build: bool = False,
     skip_distribute: bool = False,
     no_push: bool = False,
+    resume_from: str = None,
 ) -> bool:
-    """Orchestrate full release flow."""
+    """Orchestrate full release flow.
+
+    Args:
+        resume_from: Resume from step: version, changelog, tag, build, distribute
+    """
 
     console.rule(f"[bold cyan]fship release {flavor}[/bold cyan]")
 
@@ -33,25 +38,32 @@ def run_release(
         current_version = read_version()
         new_version = resolve_version(current_version, version, bump, flavor)
 
-        steps = [
-            ("Update pubspec.yaml", lambda: update_pubspec(new_version)),
-            ("Generate CHANGELOG.md", lambda: generate_changelog()),
-            ("Generate release notes", lambda: generate_release_notes(flavor)),
-            ("Commit & tag", lambda: commit_and_tag(new_version, flavor)),
+        # Define all steps with resume IDs
+        all_steps = [
+            ("Update pubspec.yaml", "version", lambda: update_pubspec(new_version)),
+            ("Generate CHANGELOG.md", "changelog", lambda: generate_changelog()),
+            ("Generate release notes", "notes", lambda: generate_release_notes(flavor)),
+            ("Commit & tag", "tag", lambda: commit_and_tag(new_version, flavor)),
+            ("Build APK", "build", lambda: build_apk_step(flavor, flavor_config) if not skip_build else True),
+            ("Distribute to Firebase", "distribute", lambda: distribute_step(flavor_config) if not skip_distribute else True),
         ]
 
-        if not skip_build:
-            steps.append(
-                ("Build APK", lambda: build_apk_step(flavor, flavor_config))
-            )
-
-        if not skip_distribute:
-            steps.append(
-                (
-                    "Distribute to Firebase",
-                    lambda: distribute_step(flavor_config),
-                )
-            )
+        # Filter steps based on resume_from or skip flags
+        if resume_from:
+            resume_ids = [step[1] for step in all_steps]
+            try:
+                start_idx = resume_ids.index(resume_from)
+                steps = [(name, fn) for name, resume_id, fn in all_steps[start_idx:]]
+            except ValueError:
+                console.print(f"[red]Invalid resume step: {resume_from}[/red]")
+                return False
+        else:
+            steps = [(name, fn) for name, resume_id, fn in all_steps]
+            # Apply skip flags
+            if skip_build:
+                steps = [s for s in steps if "Build APK" not in s[0]]
+            if skip_distribute:
+                steps = [s for s in steps if "Distribute" not in s[0]]
 
         for step_name, step_fn in steps:
             console.print(f"\n[bold blue]→[/bold blue] {step_name}")

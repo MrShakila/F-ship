@@ -46,6 +46,11 @@ def release(
     no_push: bool = typer.Option(
         False, "--no-push", help="Commit and tag but do not push to remote"
     ),
+    resume_from: str = typer.Option(
+        None,
+        "--resume-from",
+        help="Resume from step: version, changelog, tag, build, distribute (skips earlier steps)",
+    ),
 ):
     """Release a flavor to Firebase App Distribution.
 
@@ -53,7 +58,8 @@ def release(
         fship release qa                    # Interactive version prompt
         fship release qa --version 1.2.4+46  # Exact version
         fship release qa --bump patch       # Auto-bump patch version
-        fship release prod --bump minor     # Bump minor, reset patch
+        fship release qa --resume-from build   # Skip version/tag, retry from build
+        fship release qa --resume-from distribute  # Skip build, retry distribution
     """
     try:
         config = load_config(flavor)
@@ -63,6 +69,8 @@ def release(
             validate_bump_part(bump)
         if version and bump:
             raise ValidationError("Cannot specify both --version and --bump")
+        if resume_from and resume_from not in ["version", "changelog", "tag", "build", "distribute"]:
+            raise ValidationError(f"Invalid resume step: {resume_from}")
     except FshipError as e:
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
@@ -75,6 +83,7 @@ def release(
         skip_build=skip_build,
         skip_distribute=skip_distribute,
         no_push=no_push,
+        resume_from=resume_from,
     )
 
     raise typer.Exit(0 if success else 1)
