@@ -185,6 +185,17 @@ fship release qa --skip-build --skip-distribute
 # Only bumps version, generates changelog, commits, tags
 ```
 
+### Retry Failed Release
+
+If release fails at any step, fix the issue and resume from that point:
+
+```bash
+fship release qa --resume-from build       # Retry build and distribution
+fship release qa --resume-from distribute  # Retry distribution only
+```
+
+Steps: `version`, `changelog`, `notes`, `tag`, `build`, `distribute`
+
 ## Environment Setup
 
 ### Option 1: Single .env.dev file (for development)
@@ -235,11 +246,47 @@ fship release qa
 ## Commands
 
 ```bash
-fship release <flavor> [--version X.Y.Z+B] [--bump patch|minor|major] [--skip-build] [--skip-distribute]
+fship release <flavor> [OPTIONS]
 fship init                         # Interactive setup with Firebase guide
 fship validate                     # Check tools and config
 fship version                      # Show fship version
 fship --help                       # Full help
+```
+
+### Release Options
+
+```bash
+--version X.Y.Z+B              # Exact version (e.g., 3.0.4+79)
+--bump patch|minor|major       # Auto-increment version, reset build to 0
+--skip-build                   # Skip Flutter build (testing only)
+--skip-distribute              # Skip Firebase distribution (dry-run)
+--no-push                      # Commit and tag locally, don't push to remote
+--resume-from STEP             # Retry from failed step (skip earlier steps)
+```
+
+### Resume From Failed Step
+
+If release fails at any step, fix the issue and retry from that point:
+
+```bash
+# Release failed at build step
+fship release qa --resume-from build       # Skip version/changelog/tag, retry build
+
+# Release failed at distribution
+fship release qa --resume-from distribute  # Skip build, retry distribution
+
+# Available steps: version, changelog, notes, tag, build, distribute
+```
+
+**Example workflow**:
+```bash
+fship release qa --version 3.0.5+0
+# → Firebase distribution fails (wrong app ID)
+
+# Fix: Update .env.qa with correct APPIDANDROID
+
+fship release qa --resume-from distribute
+# → Retries distribution (skips version bump, build, tag)
 ```
 
 ## Prerequisites
@@ -274,6 +321,14 @@ npm install -g git-chglog
 - Ensure you're in a git repo
 - Check `git status` for uncommitted changes
 - Verify git is configured with name and email
+
+**Release failed, want to retry from a specific step?**
+- Fix the underlying issue (e.g., update app IDs, check Firebase setup)
+- Use `--resume-from` to skip completed steps and retry from failure point:
+```bash
+fship release qa --resume-from build       # Retry build (skip version/tag)
+fship release qa --resume-from distribute  # Retry distribution (skip build)
+```
 
 ## Security
 
