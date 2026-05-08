@@ -85,10 +85,11 @@ def format_version(major: int, minor: int, patch: int, build: int) -> str:
     return f"{major}.{minor}.{patch}+{build}"
 
 
-def bump_flavor_version(current: str) -> str:
+def bump_flavor_version(current: str, flavor: str = "qa") -> str:
     """Bump non-prod flavor version: increment suffix number and build.
 
     For 3.0.4-qa-1+78 → 3.0.4-qa-2+79
+    For 3.0.4+77 (no suffix) → 3.0.4-qa-1+78
 
     Raises:
         VersionError: If parsing fails
@@ -101,7 +102,7 @@ def bump_flavor_version(current: str) -> str:
         build = int(parts[1])
 
         if "-" not in semantic_part:
-            raise VersionError(f"Version {current!r} has no flavor suffix")
+            return f"{semantic_part}-{flavor}-1+{build + 1}"
 
         base, suffix = semantic_part.rsplit("-", 1)
         try:
@@ -162,7 +163,7 @@ def resolve_version(current: str, version: str = None, bump: str = None, flavor:
         if is_prod:
             new_version = bump_version(current, bump)
         else:
-            new_version = bump_flavor_version(current)
+            new_version = bump_flavor_version(current, flavor)
         console.print(f"[cyan]{current}[/cyan] → [green]{new_version}[/green]")
         return new_version
 
@@ -184,7 +185,7 @@ def resolve_version(current: str, version: str = None, bump: str = None, flavor:
         elif choice == "3":
             return major_version
     else:
-        flavor_bumped = bump_flavor_version(current)
+        flavor_bumped = bump_flavor_version(current, flavor)
         console.print(f"  [green]1) flavor bump:[/green] {flavor_bumped}")
         choice = Prompt.ask("Select 1 or enter version")
         if choice == "1":
