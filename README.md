@@ -8,6 +8,7 @@ fship release qa --version 3.0.4+79      # Exact version
 fship release qa --bump patch            # Auto-increment patch
 fship release qa --resume-from distribute  # Retry after failure
 fship multi-release qa,uat --bump patch  # Release multiple flavors
+fship publish --bump patch               # Package publish: bump, changelog, commit & tag
 fship status qa                          # Current version + last release info
 fship pre-check qa                       # Pre-flight checks before release
 ```
@@ -98,6 +99,11 @@ fship pre-check qa                       # Pre-flight checks before release
 - Path traversal protection
 - Firebase app ID format validation
 - Required environment variable validation
+
+✓ **Package Publish Mode**
+- `fship publish` bumps version, generates changelog, commits, and tags — no build or Firebase steps
+- Use before `dart pub publish` to prepare a package release
+- Same `--bump` and `--version` options as `release`
 
 ✓ **Dry-Run Mode**
 - Test version bumping, changelog, and tagging without building/distributing
@@ -254,6 +260,22 @@ fship multi-release qa,uat --bump patch
 
 Build AAB directly using Flutter's appbundle target. The `build_aab` function in `operations/builder.py` handles this — wire it into a custom step or extend the release flow.
 
+### Package Publish (pub.dev)
+
+For Dart/Flutter packages — bumps version, generates changelog, commits, and tags. No build or Firebase distribution.
+
+```bash
+fship publish --bump patch         # 0.9.5 → 0.9.6, commit, tag v0.9.6
+fship publish --version 1.0.0+0   # Exact version
+fship publish --no-push            # Commit + tag locally, push manually
+```
+
+Then publish the package:
+
+```bash
+dart pub publish
+```
+
 ### Parallel iOS + Android Builds
 
 Set environment variable to enable parallel builds:
@@ -317,6 +339,7 @@ fship release qa
 | Command | Description |
 |---|---|
 | `fship release <flavor>` | Full release: version bump → changelog → tag → build → distribute |
+| `fship publish` | Package publish: version bump → changelog → commit → tag (no build/distribute) |
 | `fship multi-release <flavors>` | Release multiple flavors in sequence (e.g., `qa,uat`) |
 | `fship status [flavor]` | Show current version, last release tag, and pending commit count |
 | `fship pre-check <flavor>` | Pre-flight checks: Flutter SDK, Firebase CLI, credentials, APK path |
@@ -348,6 +371,14 @@ fship release qa
 | `--skip-build` | Skip build for all flavors |
 | `--skip-distribute` | Skip distribution for all flavors |
 | `--no-push` | Local only for all flavors |
+
+### Publish Options
+
+| Option | Description |
+|---|---|
+| `--version, -v VERSION` | Exact version (e.g., `1.2.3+0`). Interactive if omitted |
+| `--bump, -b PART` | Auto-increment: `patch`, `minor`, or `major` |
+| `--no-push` | Commit and tag locally — don't push to remote |
 
 ### Environment Variables
 
