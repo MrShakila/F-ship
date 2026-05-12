@@ -250,17 +250,17 @@ def publish(
         help="Auto-bump: patch, minor, or major.",
     ),
     no_push: bool = typer.Option(
-        False, "--no-push", help="Commit and tag locally, don't push to remote"
+        False, "--no-push", help="Commit and tag locally only, skip push"
     ),
 ):
-    """Prepare package for publishing: version bump, changelog, commit & tag.
+    """Prepare package for publishing: version bump, changelog, commit, tag, and push.
 
     No build or Firebase distribution. Use before dart pub publish.
 
     Examples:
-        fship publish --bump patch         # Auto-bump patch
+        fship publish --bump patch         # Auto-bump patch, commit, tag, push
         fship publish --version 1.2.3+0   # Exact version
-        fship publish --no-push            # Commit + tag locally only
+        fship publish --no-push            # Commit + tag locally, no push
     """
     try:
         if bump:

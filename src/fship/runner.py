@@ -339,12 +339,30 @@ def run_publish(
         current_version = read_package_version()
         new_version = resolve_package_version(current_version, version, bump)
 
+        tag_name = f"v{new_version}"
+
+        def push_step():
+            try:
+                branch = subprocess.run(
+                    ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                    capture_output=True, text=True, check=True,
+                ).stdout.strip()
+                subprocess.run(["git", "push", "origin", branch], check=True)
+                subprocess.run(["git", "push", "origin", tag_name], check=True)
+                console.print(f"[green]✓[/green] Pushed {branch} and {tag_name}")
+                return True
+            except subprocess.CalledProcessError as e:
+                from fship.errors import DistributionError
+                raise DistributionError(f"Git push failed: {e}") from e
+
         steps = [
             ("Update pubspec.yaml", lambda: update_package_pubspec(new_version)),
             ("Generate CHANGELOG.md", lambda: generate_changelog()),
             ("Generate release notes", lambda: generate_release_notes("package")),
             ("Commit & tag", lambda: commit_and_tag(new_version, "prod")),
         ]
+        if not no_push:
+            steps.append(("Push", push_step))
 
         completed_steps = []
         for step_name, step_fn in steps:
@@ -392,10 +410,9 @@ def _show_publish_summary(version: str, no_push: bool = False) -> None:
     console.print(table)
 
     if no_push:
-        console.print("\n[yellow]⚠ Changes committed and tagged locally.[/yellow]")
-        console.print(f"[dim]Push manually: git push origin main && git push origin {tag_name}[/dim]")
-    else:
-        console.print(f"\n[dim]Now run: dart pub publish[/dim]")
+        console.print("\n[yellow]⚠ Committed and tagged locally — not pushed.[/yellow]")
+        console.print(f"[dim]Push: git push origin main && git push origin {tag_name}[/dim]")
+    console.print(f"[dim]Now run: dart pub publish[/dim]")
 
 
 def show_summary(version: str, flavor: str, no_push: bool = False) -> None:
