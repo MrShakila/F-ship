@@ -7,7 +7,7 @@ from rich.console import Console
 
 from fship.core import load_config, get_flavor
 from fship.core.config import CONFIG_FILE, CONFIG_DIR, DEFAULT_CFG, save_config
-from fship.runner import run_release
+from fship.runner import run_release, run_publish
 from fship.errors import FshipError, ValidationError
 from fship.validation import validate_bump_part
 
@@ -236,6 +236,46 @@ def multi_release(
 
 
 @app.command()
+def publish(
+    version: str = typer.Option(
+        None,
+        "--version",
+        "-v",
+        help="Exact version (e.g. 1.2.3+0). Interactive if omitted.",
+    ),
+    bump: str = typer.Option(
+        None,
+        "--bump",
+        "-b",
+        help="Auto-bump: patch, minor, or major.",
+    ),
+    no_push: bool = typer.Option(
+        False, "--no-push", help="Commit and tag locally, don't push to remote"
+    ),
+):
+    """Prepare package for publishing: version bump, changelog, commit & tag.
+
+    No build or Firebase distribution. Use before dart pub publish.
+
+    Examples:
+        fship publish --bump patch         # Auto-bump patch
+        fship publish --version 1.2.3+0   # Exact version
+        fship publish --no-push            # Commit + tag locally only
+    """
+    try:
+        if bump:
+            validate_bump_part(bump)
+        if version and bump:
+            raise ValidationError("Cannot specify both --version and --bump")
+    except FshipError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+    success = run_publish(version=version, bump=bump, no_push=no_push)
+    raise typer.Exit(0 if success else 1)
+
+
+@app.command()
 def init(interactive: bool = typer.Option(True, "--interactive/--no-interactive", help="Interactive setup with Firebase app ID guide")):
     """Initialize fship config and setup Firebase app IDs."""
     from rich.prompt import Prompt
@@ -416,6 +456,7 @@ def help():
 
     console.print("[bold]COMMANDS[/bold]")
     console.print("  [cyan]release[/cyan]         Release a flavor (version bump, build, distribute)")
+    console.print("  [cyan]publish[/cyan]         Prepare package for pub.dev (version bump, changelog, commit & tag)")
     console.print("  [cyan]multi-release[/cyan]   Release multiple flavors in sequence")
     console.print("  [cyan]status[/cyan]          Show current version, last release, pending commits")
     console.print("  [cyan]pre-check[/cyan]       Validate Flutter, Firebase, credentials before release")
@@ -450,6 +491,19 @@ def help():
     console.print("  fship release prod --bump patch\n")
     console.print("  [dim]# Parallel Android + iOS builds[/dim]")
     console.print("  FSHIP_PARALLEL_BUILDS=1 fship release qa\n")
+
+    console.print("[bold]PUBLISH (package, no build/distribute)[/bold]")
+    console.print("  [cyan]fship publish [OPTIONS][/cyan]\n")
+    console.print("  [yellow]--version, -v VERSION[/yellow]   Exact version (e.g., 1.2.3+0)")
+    console.print("  [yellow]--bump, -b PART[/yellow]         Auto-bump: patch, minor, or major")
+    console.print("  [yellow]--no-push[/yellow]               Commit and tag locally, don't push\n")
+    console.print("[bold]PUBLISH EXAMPLES[/bold]")
+    console.print("  [dim]# Auto-bump patch and prepare for pub.dev[/dim]")
+    console.print("  fship publish --bump patch\n")
+    console.print("  [dim]# Exact version[/dim]")
+    console.print("  fship publish --version 1.2.3+0\n")
+    console.print("  [dim]# Commit and tag locally only[/dim]")
+    console.print("  fship publish --bump minor --no-push\n")
 
     console.print("[bold]MULTI-RELEASE[/bold]")
     console.print("  [cyan]fship multi-release qa,uat --bump patch[/cyan]")

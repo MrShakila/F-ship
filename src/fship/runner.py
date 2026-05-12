@@ -287,6 +287,77 @@ def distribute_step(flavor_config: FlavorConfig) -> bool:
     )
 
 
+def run_publish(
+    version: str = None,
+    bump: str = None,
+    no_push: bool = False,
+) -> bool:
+    """Orchestrate package publish flow: version bump, changelog, commit & tag."""
+    console.rule("[bold cyan]fship publish[/bold cyan]")
+
+    try:
+        current_version = read_version()
+        new_version = resolve_version(current_version, version, bump, "prod", None)
+
+        steps = [
+            ("Update pubspec.yaml", lambda: update_pubspec(new_version)),
+            ("Generate CHANGELOG.md", lambda: generate_changelog()),
+            ("Generate release notes", lambda: generate_release_notes("package")),
+            ("Commit & tag", lambda: commit_and_tag(new_version, "prod")),
+        ]
+
+        completed_steps = []
+        for step_name, step_fn in steps:
+            console.print(f"\n[bold blue]→[/bold blue] {step_name}")
+            try:
+                if not step_fn():
+                    console.print(f"\n[bold red]Publish stopped at: {step_name}[/bold red]")
+                    if "Commit & tag" in completed_steps:
+                        _rollback_release(current_version, new_version, "prod")
+                    return False
+                completed_steps.append(step_name)
+            except FshipError as e:
+                console.print(f"\n[bold red]Publish stopped at: {step_name}[/bold red]")
+                console.print(f"[red]Error: {e}[/red]")
+                if "Commit & tag" in completed_steps:
+                    _rollback_release(current_version, new_version, "prod")
+                return False
+
+        console.print(f"\n[bold green]✓ Package {new_version} ready for publish![/bold green]")
+        _show_publish_summary(new_version, no_push=no_push)
+        return True
+
+    except FshipError as e:
+        console.print(f"\n[bold red]Error: {e}[/bold red]")
+        return False
+    except Exception as e:
+        console.print(f"\n[bold red]Unexpected error: {e}[/bold red]")
+        return False
+
+
+def _show_publish_summary(version: str, no_push: bool = False) -> None:
+    tag_name = f"v{version}"
+    commit_msg = f"chore: release {version}"
+
+    table = Table(title=f"Publish Summary: {version}")
+    table.add_column("Component", style="cyan")
+    table.add_column("Status", style="green")
+
+    table.add_row("Version Bumped", "pubspec.yaml updated")
+    table.add_row("Changelog", "CHANGELOG.md generated")
+    table.add_row("Release Notes", "release_note.txt generated")
+    table.add_row("Git Commit", commit_msg)
+    table.add_row("Git Tag", tag_name)
+
+    console.print(table)
+
+    if no_push:
+        console.print("\n[yellow]⚠ Changes committed and tagged locally.[/yellow]")
+        console.print(f"[dim]Push manually: git push origin main && git push origin {tag_name}[/dim]")
+    else:
+        console.print(f"\n[dim]Now run: dart pub publish[/dim]")
+
+
 def show_summary(version: str, flavor: str, no_push: bool = False) -> None:
     has_flavor_suffix = "-" in version.split("+")[0]
     is_prod = flavor == "prod"
