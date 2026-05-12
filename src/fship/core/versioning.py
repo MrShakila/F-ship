@@ -8,7 +8,7 @@ from rich.console import Console
 from rich.prompt import Prompt
 
 from fship.errors import VersionError
-from fship.validation import validate_version_format, validate_bump_part
+from fship.validation import validate_version_format, validate_package_version_format, validate_bump_part
 
 console = Console()
 
@@ -190,6 +190,103 @@ def bump_version(current: str, part: str) -> str:
         return format_version(major, minor, patch, 0)
     except Exception as e:
         raise VersionError(f"Failed to bump version: {e}")
+
+
+def read_package_version(pubspec_path: Path = None) -> str:
+    """Read version from pubspec.yaml. Accepts X.Y.Z (no build number)."""
+    path = pubspec_path or Path.cwd() / "pubspec.yaml"
+
+    if not path.exists():
+        raise VersionError(f"pubspec.yaml not found at {path}")
+
+    yaml = YAML()
+    yaml.preserve_quotes = True
+    yaml.default_flow_style = False
+
+    try:
+        data = yaml.load(path)
+        version = data.get("version", "0.0.0")
+        validate_package_version_format(version)
+        return version
+    except Exception as e:
+        raise VersionError(f"Failed to read version from pubspec.yaml: {e}")
+
+
+def write_package_version(new_version: str, pubspec_path: Path = None) -> None:
+    """Write X.Y.Z version to pubspec.yaml, preserving formatting."""
+    path = pubspec_path or Path.cwd() / "pubspec.yaml"
+
+    if not path.exists():
+        raise VersionError(f"pubspec.yaml not found at {path}")
+
+    validate_package_version_format(new_version)
+
+    yaml = YAML()
+    yaml.preserve_quotes = True
+    yaml.default_flow_style = False
+
+    try:
+        data = yaml.load(path)
+        data["version"] = new_version
+
+        with open(path, "w") as f:
+            yaml.dump(data, f)
+    except Exception as e:
+        raise VersionError(f"Failed to write version to pubspec.yaml: {e}")
+
+
+def bump_package_version(current: str, part: str) -> str:
+    """Bump X.Y.Z version: patch, minor, or major. Returns X.Y.Z (no build number).
+
+    Raises:
+        VersionError: If part invalid or parse fails
+    """
+    validate_package_version_format(current)
+    validate_bump_part(part)
+
+    try:
+        major, minor, patch = (int(x) for x in current.split("."))
+
+        if part == "patch":
+            patch += 1
+        elif part == "minor":
+            minor += 1
+            patch = 0
+        elif part == "major":
+            major += 1
+            minor = 0
+            patch = 0
+
+        return f"{major}.{minor}.{patch}"
+    except Exception as e:
+        raise VersionError(f"Failed to bump package version: {e}")
+
+
+def resolve_package_version(current: str, version: str = None, bump: str = None) -> str:
+    """Resolve new package version (X.Y.Z) from flags or interactive prompt.
+
+    Raises:
+        VersionError: If resolved version invalid
+    """
+    if version:
+        validate_package_version_format(version)
+        return version
+
+    if bump:
+        validate_bump_part(bump)
+        new_version = bump_package_version(current, bump)
+        console.print(f"[cyan]{current}[/cyan] → [green]{new_version}[/green]")
+        return new_version
+
+    console.print(f"Current version: [cyan]{current}[/cyan]")
+    suggested = bump_package_version(current, "patch")
+    console.print(f"  [green]1) bump:[/green] {suggested}")
+    choice = Prompt.ask("Select 1 or enter version")
+    if choice == "1":
+        return suggested
+
+    validate_package_version_format(choice)
+    return choice
 
 
 def resolve_version(current: str, version: str = None, bump: str = None, flavor: str = None, known_flavors: set = None) -> str:

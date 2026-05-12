@@ -4,7 +4,7 @@ from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 
-from fship.core import FlavorConfig, read_version, write_version, resolve_version
+from fship.core import FlavorConfig, read_version, write_version, resolve_version, read_package_version, write_package_version, resolve_package_version
 from fship.operations import (
     generate_changelog,
     generate_release_notes,
@@ -287,6 +287,46 @@ def distribute_step(flavor_config: FlavorConfig) -> bool:
     )
 
 
+def update_package_pubspec(version: str) -> bool:
+    try:
+        current = read_package_version()
+        write_package_version(version)
+        console.print(f"[green]✓[/green] pubspec.yaml: {current} → {version}")
+        return True
+    except FshipError as e:
+        console.print(f"[red]✗ Failed to update pubspec.yaml: {e}[/red]")
+        raise
+
+
+def _rollback_package_publish(original_version: str, new_version: str) -> None:
+    console.print("\n[yellow]Rolling back publish...[/yellow]")
+    try:
+        write_package_version(original_version)
+        console.print(f"[green]✓[/green] Reverted pubspec.yaml: {new_version} → {original_version}")
+    except Exception as e:
+        console.print(f"[red]✗ Failed to revert pubspec.yaml: {e}[/red]")
+
+    tag = f"v{new_version}"
+    try:
+        result = subprocess.run(["git", "tag", "-d", tag], capture_output=True, text=True)
+        if result.returncode == 0:
+            console.print(f"[green]✓[/green] Deleted tag: {tag}")
+        else:
+            console.print(f"[yellow]⚠[/yellow] Tag {tag} not found or already deleted")
+    except Exception as e:
+        console.print(f"[red]✗ Failed to delete tag: {e}[/red]")
+
+    try:
+        result = subprocess.run(["git", "log", "--oneline", "-1"], capture_output=True, text=True)
+        if result.returncode == 0 and f"chore: release {new_version}" in result.stdout:
+            subprocess.run(["git", "reset", "--soft", "HEAD~1"], check=True)
+            console.print("[green]✓[/green] Reverted git commit")
+    except Exception as e:
+        console.print(f"[red]✗ Failed to revert commit: {e}[/red]")
+
+    console.print("[yellow]Rollback complete. Fix the issue and retry.[/yellow]")
+
+
 def run_publish(
     version: str = None,
     bump: str = None,
@@ -296,11 +336,11 @@ def run_publish(
     console.rule("[bold cyan]fship publish[/bold cyan]")
 
     try:
-        current_version = read_version()
-        new_version = resolve_version(current_version, version, bump, "prod", None)
+        current_version = read_package_version()
+        new_version = resolve_package_version(current_version, version, bump)
 
         steps = [
-            ("Update pubspec.yaml", lambda: update_pubspec(new_version)),
+            ("Update pubspec.yaml", lambda: update_package_pubspec(new_version)),
             ("Generate CHANGELOG.md", lambda: generate_changelog()),
             ("Generate release notes", lambda: generate_release_notes("package")),
             ("Commit & tag", lambda: commit_and_tag(new_version, "prod")),
@@ -313,14 +353,14 @@ def run_publish(
                 if not step_fn():
                     console.print(f"\n[bold red]Publish stopped at: {step_name}[/bold red]")
                     if "Commit & tag" in completed_steps:
-                        _rollback_release(current_version, new_version, "prod")
+                        _rollback_package_publish(current_version, new_version)
                     return False
                 completed_steps.append(step_name)
             except FshipError as e:
                 console.print(f"\n[bold red]Publish stopped at: {step_name}[/bold red]")
                 console.print(f"[red]Error: {e}[/red]")
                 if "Commit & tag" in completed_steps:
-                    _rollback_release(current_version, new_version, "prod")
+                    _rollback_package_publish(current_version, new_version)
                 return False
 
         console.print(f"\n[bold green]✓ Package {new_version} ready for publish![/bold green]")

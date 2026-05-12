@@ -8,6 +8,10 @@ from .versioning import (
     format_version,
     bump_version,
     resolve_version,
+    read_package_version,
+    write_package_version,
+    bump_package_version,
+    resolve_package_version,
 )
 
 __all__ = [
@@ -21,4 +25,8 @@ __all__ = [
     "format_version",
     "bump_version",
     "resolve_version",
+    "read_package_version",
+    "write_package_version",
+    "bump_package_version",
+    "resolve_package_version",
 ]
